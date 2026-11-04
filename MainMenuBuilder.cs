@@ -10,6 +10,7 @@ using TMPro;
 public class MainMenuBuilder : EditorWindow
 {
     Sprite background, character, diamond;
+    TMP_FontAsset customFont; // Tambahan untuk Font Cinzel
     string gameScene = "GameScene";
     string shopScene = "ShopScene";
 
@@ -22,6 +23,8 @@ public class MainMenuBuilder : EditorWindow
         background = (Sprite)EditorGUILayout.ObjectField("Background", background, typeof(Sprite), false);
         character  = (Sprite)EditorGUILayout.ObjectField("Karakter", character, typeof(Sprite), false);
         diamond    = (Sprite)EditorGUILayout.ObjectField("Sprite Tombol", diamond, typeof(Sprite), false);
+        customFont = (TMP_FontAsset)EditorGUILayout.ObjectField("Font Cinzel (TMP)", customFont, typeof(TMP_FontAsset), false);
+        
         gameScene  = EditorGUILayout.TextField("Nama Scene Game", gameScene);
         shopScene  = EditorGUILayout.TextField("Nama Scene Shop", shopScene);
 
@@ -45,18 +48,21 @@ public class MainMenuBuilder : EditorWindow
         scaler.referenceResolution = new Vector2(1920, 1080);
         scaler.matchWidthOrHeight = 0.5f;
 
-        // EventSystem (MURNI INPUT SYSTEM BARU)
+        // EventSystem (Murni Input System Baru)
         if (Object.FindAnyObjectByType<EventSystem>() == null)
         {
             var eventSystemGO = new GameObject("EventSystem", typeof(EventSystem));
             eventSystemGO.AddComponent<InputSystemUIInputModule>();
         }
 
-        // Background
+        // Background (Auto-Fit & Bergerak)
         var bg = NewImage("Background", canvasGO.transform, background, new Color(0.1f, 0.1f, 0.2f));
         bg.raycastTarget = false;
-        Stretch(bg.rectTransform);
-        bg.rectTransform.sizeDelta = new Vector2(100, 100); 
+        bg.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+        bg.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        bg.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        bg.rectTransform.anchoredPosition = Vector2.zero;
+        bg.gameObject.AddComponent<AutoFitBackground>(); 
         bg.gameObject.AddComponent<BackgroundAnimator>(); 
 
         // Karakter
@@ -139,6 +145,9 @@ public class MainMenuBuilder : EditorWindow
         t.alignment = TextAlignmentOptions.Center;
         t.color = Color.white;
         t.raycastTarget = false;
+        
+        if (customFont != null) t.font = customFont;
+        
         t.rectTransform.sizeDelta = new Vector2(600, 100);
         return t;
     }
@@ -161,15 +170,34 @@ public class MainMenuBuilder : EditorWindow
         rt.localRotation = Quaternion.Euler(0, 0, 45);
 
         var outline = img.gameObject.AddComponent<Outline>();
-        outline.effectColor = new Color(1, 1, 1, 0.6f);
-        outline.effectDistance = new Vector2(3, 3);
+        outline.effectColor = new Color(1, 1, 1, 0.3f);
+        outline.effectDistance = new Vector2(2, 2);
 
         var btn = img.gameObject.AddComponent<Button>();
         Colorize(btn);
 
-        var txt = NewText("Label", img.transform, label, size * 0.14f);
+        // Garis Dekorasi Kiri
+        var lineLeft = NewImage("LineLeft", img.transform, null, new Color(1, 1, 1, 0.5f));
+        var lL = lineLeft.rectTransform;
+        lL.anchorMin = lL.anchorMax = new Vector2(0.5f, 0.5f);
+        lL.pivot = new Vector2(0.5f, 0.5f);
+        lL.anchoredPosition = new Vector2(-size * 0.35f, 0);
+        lL.sizeDelta = new Vector2(2, size * 0.3f);
+
+        // Garis Dekorasi Kanan
+        var lineRight = NewImage("LineRight", img.transform, null, new Color(1, 1, 1, 0.5f));
+        var lR = lineRight.rectTransform;
+        lR.anchorMin = lR.anchorMax = new Vector2(0.5f, 0.5f);
+        lR.pivot = new Vector2(0.5f, 0.5f);
+        lR.anchoredPosition = new Vector2(size * 0.35f, 0);
+        lR.sizeDelta = new Vector2(2, size * 0.3f);
+
+        var txt = NewText("Label", img.transform, label.ToUpper(), size * 0.14f);
         Stretch(txt.rectTransform);
         txt.rectTransform.localRotation = Quaternion.Euler(0, 0, -45);
+        
+        if (customFont != null) txt.fontSize = size * 0.12f;
+
         return btn;
     }
 
