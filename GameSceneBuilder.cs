@@ -7,6 +7,8 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
+// Posisi & ukuran diukur dari screenshot (1672x941) lalu diskalakan ke canvas 1920x1080 (x1.148).
+// Game view harus 16:9 supaya hasilnya sama persis dengan gambar.
 public class GameSceneBuilder : EditorWindow
 {
     static readonly string[] iconNames =
@@ -19,15 +21,20 @@ public class GameSceneBuilder : EditorWindow
     static readonly Vector2 BR  = new Vector2(1f, 0f);
     static readonly Vector2 MID = new Vector2(0.5f, 0.5f);
 
-    static readonly Color Blue = new Color(0.16f, 0.42f, 1f);
-    static readonly Color Navy = new Color(0.04f, 0.06f, 0.14f, 0.85f);
-    static readonly Color Red  = new Color(0.9f, 0.15f, 0.2f);
-    static readonly Color Cyan = new Color(0.2f, 0.75f, 1f);
-    static readonly Color Gold = new Color(1f, 0.82f, 0.2f);
+    static readonly Color Blue  = new Color(0.25f, 0.60f, 1f);
+    static readonly Color Deep  = new Color(0.04f, 0.12f, 0.40f, 1f);
+    static readonly Color Navy  = new Color(0.04f, 0.07f, 0.20f, 0.88f);
+    static readonly Color Red   = new Color(0.92f, 0.12f, 0.18f);
+    static readonly Color Cyan  = new Color(0.10f, 0.70f, 1f);
+    static readonly Color Gold  = new Color(1f, 0.82f, 0.2f);
+    static readonly Color Green = new Color(0.25f, 0.90f, 0.35f);
+
+    const string GenDir = "Assets/HUDGenerated";
 
     Sprite logo, avatar;
     Sprite[] icons = new Sprite[iconNames.Length];
     RenderTexture minimapTexture;
+    TMP_FontAsset font;
 
     string logoText     = "Eternal World";
     string playerLevel  = "Lv.1";
@@ -37,11 +44,12 @@ public class GameSceneBuilder : EditorWindow
     string questTitle   = "Main Quest";
     string questDesc    = "Go to the City Center";
     string questSub     = "• Talk to the Guard  (0 / 1)";
-    string statusText   = "120ms   14:30";
+    string pingText     = "120ms";
+    string clockText    = "14:30";
     string shopScene    = "ShopScene";
     string menuScene    = "MainMenu";
 
-    Sprite circleSprite, roundSprite;
+    Sprite sDisc, sRing, sRingThin, sTri, sPara, sGrad, roundSprite;
     Vector2 scrollPos;
 
     [MenuItem("Tools/Bangun GameScene HUD")]
@@ -54,6 +62,7 @@ public class GameSceneBuilder : EditorWindow
         scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
 
         GUILayout.Label("Aset (boleh dikosongkan)", EditorStyles.boldLabel);
+        font           = (TMP_FontAsset)EditorGUILayout.ObjectField("Font TMP (opsional)", font, typeof(TMP_FontAsset), false);
         logo           = (Sprite)EditorGUILayout.ObjectField("Logo", logo, typeof(Sprite), false);
         avatar         = (Sprite)EditorGUILayout.ObjectField("Avatar", avatar, typeof(Sprite), false);
         minimapTexture = (RenderTexture)EditorGUILayout.ObjectField("Render Texture Minimap", minimapTexture, typeof(RenderTexture), false);
@@ -74,7 +83,8 @@ public class GameSceneBuilder : EditorWindow
         questTitle   = EditorGUILayout.TextField("Judul quest", questTitle);
         questDesc    = EditorGUILayout.TextField("Deskripsi quest", questDesc);
         questSub     = EditorGUILayout.TextField("Sub quest", questSub);
-        statusText   = EditorGUILayout.TextField("Teks status", statusText);
+        pingText     = EditorGUILayout.TextField("Teks ping", pingText);
+        clockText    = EditorGUILayout.TextField("Teks jam", clockText);
         shopScene    = EditorGUILayout.TextField("Nama Scene Shop", shopScene);
         menuScene    = EditorGUILayout.TextField("Nama Scene Menu", menuScene);
 
@@ -90,8 +100,7 @@ public class GameSceneBuilder : EditorWindow
             return;
         }
 
-        circleSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
-        roundSprite  = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+        MakeSprites();
 
         // Canvas
         var canvasGO = new GameObject("HUD", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -103,104 +112,123 @@ public class GameSceneBuilder : EditorWindow
         Transform root = canvasGO.transform;
 
         // EventSystem (Input System)
-        if (Object.FindFirstObjectByType<EventSystem>() == null)
+        if (UnityEngine.Object.FindFirstObjectByType<EventSystem>() == null)
             new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
 
-        // Manager HUD
         var hud = new GameObject("HUDManager").AddComponent<GameHUD>();
 
-        // ---------- Kiri atas: kartu pemain ----------
-        var card = Anchored("PlayerCard", root, TL, TL, new Vector2(30, -30), new Vector2(520, 170));
+        // ================= KIRI ATAS: kartu pemain =================
+        var card = Anchored("PlayerCard", root, TL, TL, Vector2.zero, new Vector2(560, 190));
 
-        var avatarRing = Anchored("AvatarRing", card, TL, TL, Vector2.zero, new Vector2(160, 160));
-        Img(avatarRing, circleSprite, Blue);
-        var avatarMask = Full("AvatarMask", avatarRing, 6);
-        Img(avatarMask, circleSprite, Navy);
+        var hpFill = Bar("HPBar", card, new Vector2(218, -75), new Vector2(316, 32), Red,
+                         out TMP_Text hpText, $"HP   {maxHP} / {maxHP}");
+        var mpFill = Bar("MPBar", card, new Vector2(218, -109), new Vector2(293, 32), Cyan,
+                         out TMP_Text mpText, $"MP   {maxMP} / {maxMP}");
+
+        var lv = Anchored("LevelBadge", card, TL, TL, new Vector2(207, -38), new Vector2(86, 33));
+        Img(lv, sPara, new Color(0.05f, 0.14f, 0.45f));
+        Fill(lv, playerLevel, 22, TextAlignmentOptions.Center, FontStyles.Bold);
+
+        var avatarRing = Anchored("AvatarRing", card, TL, TL, new Vector2(32, -11), new Vector2(195, 195));
+        Img(avatarRing, sDisc, Navy);
+        var avatarMask = Full("AvatarMask", avatarRing, 8);
+        Img(avatarMask, sDisc, new Color(0.1f, 0.15f, 0.3f));
         avatarMask.gameObject.AddComponent<Mask>().showMaskGraphic = true;
         var avatarImg = Img(Full("Avatar", avatarMask, 0), avatar, Color.white);
         avatarImg.enabled = avatar != null;
+        Img(Full("Rim", avatarRing, 0), sRing, Blue);
 
-        var lv = Anchored("LevelBadge", card, TL, TL, new Vector2(110, -2), new Vector2(90, 32));
-        Img(lv, roundSprite, Navy, Image.Type.Sliced);
-        Fill(lv, playerLevel, 22, TextAlignmentOptions.Center);
+        // ================= KIRI ATAS: quest =================
+        var quest = Anchored("QuestPanel", root, TL, TL, new Vector2(0, -215), new Vector2(482, 135));
+        Img(quest, sGrad, new Color(0.10f, 0.14f, 0.30f, 1f));
 
-        var hpFill = Bar("HPBar", card, new Vector2(165, -40), new Vector2(340, 34), Red,
-                         out TMP_Text hpText, $"HP   {maxHP} / {maxHP}");
-        var mpFill = Bar("MPBar", card, new Vector2(165, -80), new Vector2(340, 34), Cyan,
-                         out TMP_Text mpText, $"MP   {maxMP} / {maxMP}");
+        Img(Anchored("QuestLine", quest, TL, TL, new Vector2(31, -55), new Vector2(3, 75)), null, Cyan);
+        Diamond("QuestIcon", quest, TL, new Vector2(60, -40), 44, Blue, Deep, "!");
 
-        // ---------- Kiri atas: quest ----------
-        var quest = Anchored("QuestPanel", root, TL, TL, new Vector2(30, -215), new Vector2(560, 150));
-        Img(quest, roundSprite, new Color(0.04f, 0.06f, 0.14f, 0.6f), Image.Type.Sliced);
+        TextAt("QuestTitle", quest, new Vector2(106, -14), new Vector2(370, 36), questTitle, 26, Gold,
+               TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        TextAt("QuestDesc", quest, new Vector2(106, -55), new Vector2(370, 36), questDesc, 23, Color.white,
+               TextAlignmentOptions.MidlineLeft, FontStyles.Normal);
+        TextAt("QuestSub", quest, new Vector2(106, -97), new Vector2(370, 36), questSub, 23, Color.white,
+               TextAlignmentOptions.MidlineLeft, FontStyles.Normal);
 
-        var questIcon = Anchored("QuestIcon", quest, TL, MID, new Vector2(48, -75), new Vector2(46, 46));
-        questIcon.localRotation = Quaternion.Euler(0, 0, 45);
-        Img(questIcon, roundSprite, Blue, Image.Type.Sliced);
-        Fill(questIcon, "!", 28, TextAlignmentOptions.Center).rectTransform.localRotation =
-            Quaternion.Euler(0, 0, -45);
-
-        TextAt("QuestTitle", quest, new Vector2(100, -18),  new Vector2(440, 40), questTitle, 28, Gold,        TextAlignmentOptions.Left);
-        TextAt("QuestDesc",  quest, new Vector2(100, -62),  new Vector2(440, 36), questDesc,  24, Color.white, TextAlignmentOptions.Left);
-        TextAt("QuestSub",   quest, new Vector2(100, -100), new Vector2(440, 34), questSub,   22, Color.white, TextAlignmentOptions.Left);
-
-        // ---------- Tengah atas: logo ----------
-        var logoRT = Anchored("Logo", root, TC, TC, new Vector2(0, -20), new Vector2(420, 130));
+        // ================= TENGAH ATAS: logo =================
+        var logoRT = Anchored("Logo", root, TC, TC, new Vector2(0, -29), new Vector2(374, 109));
         if (logo != null)
             Img(logoRT, logo, Color.white).preserveAspect = true;
         else
-            Fill(logoRT, logoText, 56, TextAlignmentOptions.Center);
+            Fill(logoRT, logoText, 56, TextAlignmentOptions.Center, FontStyles.Bold | FontStyles.Italic);
 
-        // ---------- Kanan atas: Reward, Shop, Bag, Menu ----------
-        var topBar = Anchored("TopButtons", root, TR, TR, new Vector2(-30, -30), new Vector2(4 * 120 + 3 * 34, 100));
-        var hlg = topBar.gameObject.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 34;
-        hlg.childControlWidth = true;
-        hlg.childControlHeight = true;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = false;
+        // ================= KANAN ATAS: Reward, Shop, Bag, Menu =================
+        var topBar = Anchored("TopButtons", root, TL, TL, Vector2.zero, Vector2.zero);
+        topBar.anchorMin = Vector2.zero;
+        topBar.anchorMax = Vector2.one;
+        topBar.offsetMin = topBar.offsetMax = Vector2.zero;
 
-        var btnReward = TopButton(topBar, 0);
-        var btnShop   = TopButton(topBar, 1);
-        var btnBag    = TopButton(topBar, 2);
-        var btnMenu   = TopButton(topBar, 3);
+        var btnReward = TopButton(topBar, 0, 1441f);
+        var btnShop   = TopButton(topBar, 1, 1568f);
+        var btnBag    = TopButton(topBar, 2, 1694f);
+        var btnMenu   = TopButton(topBar, 3, 1820f);
 
-        // ---------- Kanan atas: minimap ----------
-        var mini = Anchored("Minimap", root, TR, TR, new Vector2(-40, -150), new Vector2(230, 230));
-        Img(mini, circleSprite, Blue);
+        // ================= KANAN ATAS: minimap =================
+        var mini = Anchored("Minimap", root, TR, MID, new Vector2(-137, -253), new Vector2(222, 222));
+        Img(mini, sDisc, Navy);
         var miniMask = Full("MinimapMask", mini, 8);
-        Img(miniMask, circleSprite, Navy);
+        Img(miniMask, sDisc, Navy);
         miniMask.gameObject.AddComponent<Mask>().showMaskGraphic = true;
         var raw = Full("MinimapView", miniMask, 0).gameObject.AddComponent<RawImage>();
         raw.texture = minimapTexture;
-        raw.color = minimapTexture != null ? Color.white : Navy;
+        raw.color = minimapTexture != null ? Color.white : new Color(0.25f, 0.35f, 0.3f, 1f);
         raw.raycastTarget = false;
+        Img(Full("MinimapRim", mini, 0), sRing, new Color(0.45f, 0.85f, 1f));
 
-        var north = Anchored("North", mini, TC, new Vector2(0.5f, 0f), new Vector2(0, 6), new Vector2(40, 30));
-        AddText(north, "N", 22, TextAlignmentOptions.Center, Color.white);
+        var arrow = Anchored("PlayerArrow", mini, MID, MID, new Vector2(0, -2), new Vector2(34, 40));
+        Img(arrow, sTri, new Color(0.3f, 0.7f, 1f));
+        Diamond("QuestMarker", mini, MID, new Vector2(58, 41), 22, new Color(1f, 0.65f, 0.1f),
+                new Color(0.1f, 0.15f, 0.3f), "!");
+        AddText(Anchored("North", mini, TC, TC, new Vector2(0, -4), new Vector2(40, 28)), "N", 22,
+                TextAlignmentOptions.Center, Color.white, FontStyles.Bold);
 
-        // Nama lokasi di bawah minimap
-        var loc = Anchored("LocationBanner", root, TR, TC, new Vector2(-155, -388), new Vector2(260, 44));
-        Img(loc, roundSprite, Navy, Image.Type.Sliced);
-        Fill(loc, locationName, 22, TextAlignmentOptions.Center);
+        var loc = Anchored("LocationBanner", root, TR, MID, new Vector2(-134, -372), new Vector2(180, 36));
+        Img(loc, sPara, new Color(0.05f, 0.15f, 0.50f, 0.95f));
+        Fill(loc, locationName, 22, TextAlignmentOptions.Center, FontStyles.Bold);
 
-        // ---------- Kanan bawah: tombol aksi ----------
-        var btnRun    = ActionButton(root, 4, new Vector2(-89, 368),  126);
-        var btnSkill1 = ActionButton(root, 5, new Vector2(-244, 288), 126);
-        var btnSkill2 = ActionButton(root, 6, new Vector2(-359, 162), 138);
-        var btnAttack = ActionButton(root, 7, new Vector2(-135, 162), 172);
-        var btnJump   = ActionButton(root, 8, new Vector2(-250, 64),   86);
+        // ================= KANAN BAWAH: tombol aksi =================
+        var btnRun    = ActionButton(root, 4, new Vector2(-89, 370),  121);
+        var btnSkill1 = ActionButton(root, 5, new Vector2(-246, 284), 129);
+        var btnSkill2 = ActionButton(root, 6, new Vector2(-361, 156), 138);
+        var btnAttack = ActionButton(root, 7, new Vector2(-137, 158), 172);
+        var btnJump   = ActionButton(root, 8, new Vector2(-252, 64),   86);
 
-        // ---------- Kiri bawah: area joystick (tempat Joystick Pack) ----------
-        var joyRing = Anchored("JoystickArea", root, BL, MID, new Vector2(212, 248), new Vector2(260, 260));
-        Img(joyRing, circleSprite, new Color(1, 1, 1, 0.2f));
-        Img(Full("JoystickKnob", joyRing, 80), circleSprite, new Color(1, 1, 1, 0.35f));
+        // ================= KIRI BAWAH: joystick (visual) =================
+        var joy = Anchored("JoystickArea", root, BL, MID, new Vector2(215, 248), new Vector2(287, 287));
+        Img(joy, sRingThin, new Color(1, 1, 1, 0.85f));
+        Img(Full("JoystickFill", joy, 0), sDisc, new Color(1, 1, 1, 0.10f));
+        Img(Anchored("JoystickKnob", joy, MID, MID, Vector2.zero, new Vector2(106, 106)), sDisc,
+            new Color(1, 1, 1, 0.45f));
+        Arrow(joy, new Vector2(0, 112), 0);
+        Arrow(joy, new Vector2(0, -112), 180);
+        Arrow(joy, new Vector2(-112, 0), 90);
+        Arrow(joy, new Vector2(112, 0), -90);
 
-        // ---------- Kiri bawah: status ----------
-        var status = Anchored("StatusBar", root, BL, BL, new Vector2(20, 18), new Vector2(300, 40));
-        Img(status, roundSprite, Navy, Image.Type.Sliced);
-        Fill(status, statusText, 20, TextAlignmentOptions.Center);
+        // ================= KIRI BAWAH: status =================
+        var status = Anchored("StatusBar", root, BL, BL, new Vector2(17, 16), new Vector2(316, 33));
+        Img(status, roundSprite, new Color(0.04f, 0.07f, 0.20f, 0.85f), Image.Type.Sliced);
+        for (int i = 0; i < 4; i++)
+        {
+            Img(Anchored("SigW" + i, status, BL, BL, new Vector2(12 + i * 7, 8), new Vector2(5, 6 + i * 4)), null, Color.white);
+            Img(Anchored("SigG" + i, status, BL, BL, new Vector2(52 + i * 7, 8), new Vector2(5, 6 + i * 4)), null, Green);
+        }
+        AddText(Anchored("Ping", status, TL, TL, new Vector2(81, 0), new Vector2(90, 33)), pingText, 20,
+                TextAlignmentOptions.MidlineLeft, Green, FontStyles.Normal);
+        AddText(Anchored("Clock", status, TL, TL, new Vector2(178, 0), new Vector2(70, 33)), clockText, 20,
+                TextAlignmentOptions.MidlineLeft, Color.white, FontStyles.Normal);
+        var bat = Anchored("Battery", status, TL, TL, new Vector2(259, -8), new Vector2(36, 18));
+        Img(bat, roundSprite, Color.white, Image.Type.Sliced);
+        Img(Full("BatteryInner", bat, 2), roundSprite, new Color(0.04f, 0.07f, 0.20f, 1f), Image.Type.Sliced);
+        Img(Full("BatteryFill", bat, 4), roundSprite, Color.white, Image.Type.Sliced);
 
-        // Sambungkan event tombol
+        // ================= Event tombol =================
         UnityEventTools.AddPersistentListener(btnReward.onClick, hud.OnReward);
         UnityEventTools.AddPersistentListener(btnShop.onClick,   hud.OpenShop);
         UnityEventTools.AddPersistentListener(btnBag.onClick,    hud.OnBag);
@@ -211,7 +239,6 @@ public class GameSceneBuilder : EditorWindow
         UnityEventTools.AddPersistentListener(btnAttack.onClick, hud.OnAttack);
         UnityEventTools.AddPersistentListener(btnJump.onClick,   hud.OnJump);
 
-        // Isi field GameHUD
         var hs = new SerializedObject(hud);
         hs.FindProperty("hpFill").objectReferenceValue = hpFill;
         hs.FindProperty("mpFill").objectReferenceValue = mpFill;
@@ -226,7 +253,71 @@ public class GameSceneBuilder : EditorWindow
         Debug.Log("HUD GameScene selesai dibuat. Simpan scene (Ctrl+S).");
     }
 
-    // ---------- Helper ----------
+    // ================= Sprite bawaan hasil generate =================
+    void MakeSprites()
+    {
+        roundSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+
+        sDisc = Gen("hud_disc", 256, 256, (u, v) =>
+        {
+            float x = u * 2 - 1, y = v * 2 - 1;
+            return x * x + y * y <= 1f ? 1f : 0f;
+        });
+        sRing = Gen("hud_ring", 256, 256, (u, v) =>
+        {
+            float x = u * 2 - 1, y = v * 2 - 1;
+            float r = Mathf.Sqrt(x * x + y * y);
+            return (r <= 1f && r >= 0.92f) ? 1f : 0f;
+        });
+        sRingThin = Gen("hud_ring_thin", 256, 256, (u, v) =>
+        {
+            float x = u * 2 - 1, y = v * 2 - 1;
+            float r = Mathf.Sqrt(x * x + y * y);
+            return (r <= 1f && r >= 0.97f) ? 1f : 0f;
+        });
+        sTri  = Gen("hud_tri", 64, 64, (u, v) => Mathf.Abs(u * 2 - 1) <= v ? 1f : 0f);
+        sPara = Gen("hud_para", 256, 32, (u, v) => (u >= 0.05f * (1f - v) && u <= 1f - 0.05f * v) ? 1f : 0f);
+        sGrad = Gen("hud_grad", 256, 8, (u, v) => 0.8f * (1f - u));
+    }
+
+    Sprite Gen(string name, int w, int h, System.Func<float, float, float> alphaFn)
+    {
+        string path = $"{GenDir}/{name}.png";
+        var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        if (existing != null) return existing;
+
+        if (!AssetDatabase.IsValidFolder(GenDir)) AssetDatabase.CreateFolder("Assets", "HUDGenerated");
+
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+        var px = new Color[w * h];
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                float a = 0f;
+                for (int sy = 0; sy < 3; sy++)
+                    for (int sx = 0; sx < 3; sx++)
+                        a += alphaFn((x + (sx + 0.5f) / 3f) / w, 1f - (y + (sy + 0.5f) / 3f) / h);
+                px[y * w + x] = new Color(1, 1, 1, a / 9f);
+            }
+        }
+        tex.SetPixels(px);
+        tex.Apply();
+        System.IO.File.WriteAllBytes(path, tex.EncodeToPNG());
+        DestroyImmediate(tex);
+        AssetDatabase.ImportAsset(path);
+
+        var ti = (TextureImporter)AssetImporter.GetAtPath(path);
+        ti.textureType = TextureImporterType.Sprite;
+        ti.spriteImportMode = SpriteImportMode.Single;
+        ti.alphaIsTransparency = true;
+        ti.mipmapEnabled = false;
+        ti.textureCompression = TextureImporterCompression.Uncompressed;
+        ti.SaveAndReimport();
+        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+    }
+
+    // ================= Helper UI =================
     RectTransform Anchored(string name, Transform parent, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size)
     {
         var rt = new GameObject(name, typeof(RectTransform)).GetComponent<RectTransform>();
@@ -259,69 +350,82 @@ public class GameSceneBuilder : EditorWindow
         return img;
     }
 
-    TMP_Text AddText(RectTransform rt, string text, float fontSize, TextAlignmentOptions align, Color color)
+    TMP_Text AddText(RectTransform rt, string text, float fontSize, TextAlignmentOptions align,
+                     Color color, FontStyles style = FontStyles.Normal)
     {
         var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
+        if (font != null) t.font = font;
         t.text = text;
         t.fontSize = fontSize;
         t.alignment = align;
         t.color = color;
+        t.fontStyle = style;
+        t.enableWordWrapping = false;
         t.raycastTarget = false;
         return t;
     }
 
-    TMP_Text Fill(Transform parent, string text, float fontSize, TextAlignmentOptions align)
+    TMP_Text Fill(Transform parent, string text, float fontSize, TextAlignmentOptions align,
+                  FontStyles style = FontStyles.Normal)
     {
-        return AddText(Full("Label", parent, 0), text, fontSize, align, Color.white);
+        return AddText(Full("Label", parent, 0), text, fontSize, align, Color.white, style);
     }
 
-    void TextAt(string name, Transform parent, Vector2 pos, Vector2 size, string text,
-                float fontSize, Color color, TextAlignmentOptions align)
+    void TextAt(string name, Transform parent, Vector2 pos, Vector2 size, string text, float fontSize,
+                Color color, TextAlignmentOptions align, FontStyles style)
     {
-        AddText(Anchored(name, parent, TL, TL, pos, size), text, fontSize, align, color);
+        AddText(Anchored(name, parent, TL, TL, pos, size), text, fontSize, align, color, style);
     }
 
     Image Bar(string name, Transform parent, Vector2 pos, Vector2 size, Color fillColor,
               out TMP_Text label, string text)
     {
         var rt = Anchored(name, parent, TL, TL, pos, size);
-        Img(rt, roundSprite, Navy, Image.Type.Sliced);
+        Img(rt, sPara, new Color(0.04f, 0.07f, 0.20f, 0.9f));
 
-        var fill = Img(Full("Fill", rt, 3), roundSprite, fillColor, Image.Type.Filled);
+        var fill = Img(Full("Fill", rt, 2), sPara, fillColor, Image.Type.Filled);
         fill.fillMethod = Image.FillMethod.Horizontal;
         fill.fillOrigin = 0;
         fill.fillAmount = 1f;
 
-        label = Fill(rt, text, 22, TextAlignmentOptions.Center);
+        var lrt = Full("Label", rt, 0);
+        lrt.offsetMin = new Vector2(30, 0);
+        label = AddText(lrt, text, 22, TextAlignmentOptions.MidlineLeft, Color.white, FontStyles.Bold);
         return fill;
     }
 
-    Button TopButton(Transform parent, int index)
+    RectTransform Diamond(string name, Transform parent, Vector2 anchor, Vector2 pos, float size,
+                          Color outer, Color inner, string symbol)
     {
-        var slot = Anchored(iconNames[index], parent, TL, TL, Vector2.zero, new Vector2(120, 100));
-        var slotLE = slot.gameObject.AddComponent<LayoutElement>();
-        slotLE.preferredWidth = 120;
-        slotLE.preferredHeight = 100;
+        var d = Anchored(name, parent, anchor, MID, pos, new Vector2(size, size));
+        d.localRotation = Quaternion.Euler(0, 0, 45);
+        Img(d, roundSprite, outer, Image.Type.Sliced);
+        var inn = Full("Inner", d, size * 0.1f);
+        Img(inn, roundSprite, inner, Image.Type.Sliced);
+        var t = AddText(Full("Symbol", inn, 0), symbol, size * 0.6f, TextAlignmentOptions.Center,
+                        Color.white, FontStyles.Bold);
+        t.rectTransform.localRotation = Quaternion.Euler(0, 0, -45);
+        return d;
+    }
+
+    void Arrow(Transform parent, Vector2 pos, float rotZ)
+    {
+        var a = Anchored("Arrow", parent, MID, MID, pos, new Vector2(24, 18));
+        a.localRotation = Quaternion.Euler(0, 0, rotZ);
+        Img(a, sTri, new Color(1, 1, 1, 0.85f));
+    }
+
+    Button TopButton(Transform parent, int index, float centerX)
+    {
+        var slot = Anchored(iconNames[index], parent, TR, new Vector2(0.5f, 1f),
+                            new Vector2(centerX - 1920f, -28f), new Vector2(120, 100));
         var slotImg = Img(slot, null, new Color(0, 0, 0, 0), Image.Type.Simple, true);
 
-        var vlg = slot.gameObject.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 4;
-        vlg.childAlignment = TextAnchor.UpperCenter;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = true;
-        vlg.childForceExpandWidth = false;
-        vlg.childForceExpandHeight = false;
+        var iconRT = Anchored("Icon", slot, TC, TC, Vector2.zero, new Vector2(62, 62));
+        Img(iconRT, icons[index] != null ? icons[index] : sDisc, Color.white);
 
-        var iconRT = Anchored("Icon", slot, TL, TL, Vector2.zero, new Vector2(64, 64));
-        var iconLE = iconRT.gameObject.AddComponent<LayoutElement>();
-        iconLE.preferredWidth = 64;
-        iconLE.preferredHeight = 64;
-        Sprite icon = icons[index] != null ? icons[index] : circleSprite;
-        Img(iconRT, icon, Color.white);
-
-        var labelRT = Anchored("Label", slot, TL, TL, Vector2.zero, new Vector2(120, 28));
-        labelRT.gameObject.AddComponent<LayoutElement>().preferredHeight = 28;
-        AddText(labelRT, iconNames[index], 22, TextAlignmentOptions.Center, Color.white);
+        var labelRT = Anchored("Label", slot, TC, TC, new Vector2(0, -64), new Vector2(120, 30));
+        AddText(labelRT, iconNames[index], 22, TextAlignmentOptions.Center, Color.white, FontStyles.Bold);
 
         var btn = slot.gameObject.AddComponent<Button>();
         btn.targetGraphic = slotImg;
@@ -331,19 +435,17 @@ public class GameSceneBuilder : EditorWindow
 
     Button ActionButton(Transform parent, int index, Vector2 pos, float size)
     {
-        var ring = Anchored(iconNames[index] + " Button", parent, BR, MID, pos, new Vector2(size, size));
-        Img(ring, circleSprite, Blue);
-
-        var face = Full("Face", ring, 4);
-        var faceImg = Img(face, circleSprite, Navy, Image.Type.Simple, true);
+        var btnRT = Anchored(iconNames[index] + " Button", parent, BR, MID, pos, new Vector2(size, size));
+        var faceImg = Img(btnRT, sDisc, Deep, Image.Type.Simple, true);
+        Img(Full("Ring", btnRT, 0), sRing, Blue);
 
         if (icons[index] != null)
-            Img(Full("Icon", face, size * 0.22f), icons[index], Color.white);
+            Img(Full("Icon", btnRT, size * 0.2f), icons[index], Color.white);
         else
-            AddText(Full("Label", face, 0), iconNames[index], size > 100 ? 22 : 18,
-                    TextAlignmentOptions.Center, Color.white);
+            AddText(Full("Label", btnRT, 0), iconNames[index], size > 100 ? 22 : 18,
+                    TextAlignmentOptions.Center, Color.white, FontStyles.Bold);
 
-        var btn = face.gameObject.AddComponent<Button>();
+        var btn = btnRT.gameObject.AddComponent<Button>();
         btn.targetGraphic = faceImg;
         btn.transition = Selectable.Transition.None;
         return btn;
