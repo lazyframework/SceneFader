@@ -31,7 +31,6 @@ public class SceneFader : MonoBehaviour
         fadeImage.gameObject.SetActive(true);
         Color color = fadeImage.color;
         
-        // Fade Out (Hitam)
         for (float t = 0; t < 1; t += Time.deltaTime * 2f)
         {
             color.a = Mathf.Lerp(0, 1, t);
@@ -41,7 +40,6 @@ public class SceneFader : MonoBehaviour
         color.a = 1;
         fadeImage.color = color;
 
-        // Load Scene
         SceneManager.LoadScene(sceneName);
     }
 }
