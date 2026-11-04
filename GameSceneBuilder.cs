@@ -18,15 +18,12 @@ public class GameSceneBuilder : EditorWindow
     static readonly Vector2 BR = new Vector2(1f, 0f);
     static readonly Vector2 MID = new Vector2(0.5f, 0.5f);
 
-    // Warna-warna HUD
-    static readonly Color Blue = new Color(0.16f, 0.42f, 1f);
     static readonly Color Navy = new Color(0.04f, 0.06f, 0.14f, 0.85f);
-    static readonly Color Red = new Color(0.9f, 0.15f, 0.2f);
-    static readonly Color Cyan = new Color(0.2f, 0.75f, 1f);
+    static readonly Color Red = new Color(1f, 0.1f, 0.1f);  
+    static readonly Color Cyan = new Color(0.1f, 0.6f, 1f); 
     static readonly Color Gold = new Color(1f, 0.82f, 0.2f);
-    
-    // Warna Tombol Transparan Gelap (Hitam agak transparan)
     static readonly Color DarkTransparent = new Color(0.05f, 0.05f, 0.05f, 0.7f);
+    static readonly Color MapBorderBlue = new Color(0.2f, 0.6f, 1f, 1f);
 
     Sprite logo, avatar;
     Sprite[] icons = new Sprite[iconNames.Length];
@@ -79,25 +76,32 @@ public class GameSceneBuilder : EditorWindow
 
         var hud = new GameObject("HUDManager").AddComponent<GameHUD>();
 
-        // --- KIRI ATAS: KARTU PEMAIN ---
-        var card = Anchored("PlayerCard", root, TL, TL, new Vector2(30, -30), new Vector2(520, 170));
-        var avatarRing = Anchored("AvatarRing", card, TL, TL, Vector2.zero, new Vector2(160, 160));
-        Img(avatarRing, circleSprite, Blue);
-        var avatarMask = Full("AvatarMask", avatarRing, 6);
-        Img(avatarMask, circleSprite, Navy);
-        avatarMask.gameObject.AddComponent<Mask>().showMaskGraphic = true;
-        var avatarImg = Img(Full("Avatar", avatarMask, 0), avatar, Color.white);
-        avatarImg.enabled = avatar != null;
+        // --- KIRI ATAS: KARTU PEMAIN (MENYATU TANPA BACKGROUND) ---
+        var card = Anchored("PlayerCard", root, TL, TL, new Vector2(30, -30), new Vector2(550, 160));
 
-        var lv = Anchored("LevelBadge", card, TL, TL, new Vector2(110, -2), new Vector2(90, 32));
+        // 1. AVATAR (Tanpa Background/Border)
+        var avatarObj = Anchored("Avatar", card, TL, MID, new Vector2(75, 0), new Vector2(140, 140));
+        var avatarImg = avatarObj.gameObject.AddComponent<Image>();
+        avatarImg.sprite = avatar;
+        // Jika avatar kosong di Builder, beri warna abu transparan agar tetap terlihat
+        avatarImg.color = avatar != null ? Color.white : new Color(0.1f, 0.1f, 0.1f, 0.5f);
+        
+        // Masking bulat untuk Avatar
+        var mask = avatarObj.gameObject.AddComponent<Mask>();
+        mask.showMaskGraphic = true;
+
+        // 2. LEVEL (Nempel di kanan atas Avatar)
+        var lv = Anchored("LevelBadge", card, TL, MID, new Vector2(130, 50), new Vector2(70, 26));
         Img(lv, roundSprite, Navy, Image.Type.Sliced);
-        Fill(lv, "Lv.1", 22, TextAlignmentOptions.Center);
+        Fill(lv, "Lv.1", 20, TextAlignmentOptions.Center);
 
-        var hpFill = Bar("HPBar", card, new Vector2(165, -40), new Vector2(340, 34), Red, out TMP_Text hpText, "HP 100/100");
-        var mpFill = Bar("MPBar", card, new Vector2(165, -80), new Vector2(340, 34), Cyan, out TMP_Text mpText, "MP 100/100");
+        // 3. BAR HP/MP (Menempel langsung di sebelah kanan Avatar)
+        var hpFill = Bar("HPBar", card, new Vector2(145, 15), new Vector2(370, 30), Red, out TMP_Text hpText, "HP 100/100");
+        var mpFill = Bar("MPBar", card, new Vector2(145, -20), new Vector2(370, 30), Cyan, out TMP_Text mpText, "MP 100/100");
+
 
         // --- KIRI ATAS: QUEST ---
-        var quest = Anchored("QuestPanel", root, TL, TL, new Vector2(30, -215), new Vector2(560, 150));
+        var quest = Anchored("QuestPanel", root, TL, TL, new Vector2(30, -200), new Vector2(560, 150));
         Img(quest, roundSprite, new Color(0.04f, 0.06f, 0.14f, 0.6f), Image.Type.Sliced);
         TextAt("QuestTitle", quest, new Vector2(100, -18), new Vector2(440, 40), "Main Quest", 28, Gold, TextAlignmentOptions.Left);
         TextAt("QuestDesc", quest, new Vector2(100, -62), new Vector2(440, 36), "Go to the City Center", 24, Color.white, TextAlignmentOptions.Left);
@@ -120,15 +124,26 @@ public class GameSceneBuilder : EditorWindow
         var btnBag = TopButton(topBar, 2);
         var btnMenu = TopButton(topBar, 3);
 
-        // --- KANAN ATAS: MINIMAP ---
+        // --- KANAN ATAS: MINIMAP (BORDER BIRU) ---
         var mini = Anchored("Minimap", root, TR, TR, new Vector2(-40, -150), new Vector2(230, 230));
-        Img(mini, circleSprite, Blue);
-        var miniMask = Full("MinimapMask", mini, 8);
-        Img(miniMask, circleSprite, Navy);
-        miniMask.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+        var border = Full("Border", mini, -4); 
+        var borderImg = border.gameObject.AddComponent<Image>();
+        borderImg.sprite = circleSprite;
+        borderImg.color = MapBorderBlue;
+
+        var inner = Full("Inner", mini, 0);
+        var innerImg = inner.gameObject.AddComponent<Image>();
+        innerImg.sprite = circleSprite;
+        innerImg.color = new Color(0, 0, 0, 0.5f); 
+
+        var miniMask = Full("MinimapMask", inner, 0);
+        var maskImg = miniMask.gameObject.AddComponent<Image>();
+        maskImg.sprite = circleSprite;
+        miniMask.gameObject.AddComponent<Mask>().showMaskGraphic = false; 
+
         var raw = Full("MinimapView", miniMask, 0).gameObject.AddComponent<RawImage>();
         raw.texture = minimapTexture;
-        raw.color = minimapTexture != null ? Color.white : Navy;
+        raw.color = minimapTexture != null ? Color.white : new Color(0.1f, 0.1f, 0.15f, 0.8f);
 
         // --- KANAN BAWAH: TOMBOL AKSI ---
         var btnRun = ActionButton(root, 4, new Vector2(-89, 368), 126);
@@ -139,8 +154,8 @@ public class GameSceneBuilder : EditorWindow
 
         // --- KIRI BAWAH: JOYSTICK ---
         var joyRing = Anchored("JoystickArea", root, BL, MID, new Vector2(212, 248), new Vector2(260, 260));
-        Img(joyRing, circleSprite, new Color(1, 1, 1, 0.2f));
-        Img(Full("JoystickKnob", joyRing, 80), circleSprite, new Color(1, 1, 1, 0.35f));
+        Img(joyRing, circleSprite, new Color(1, 1, 1, 0.1f)); 
+        Img(Full("JoystickKnob", joyRing, 80), circleSprite, new Color(1, 1, 1, 0.25f));
 
         // Sambungkan Event Tombol
         UnityEventTools.AddPersistentListener(btnReward.onClick, hud.OnReward);
@@ -163,35 +178,30 @@ public class GameSceneBuilder : EditorWindow
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
     }
 
-    // --- FUNGSI BAR DENGAN CLIP PATH (MASK) ---
+    // --- FUNGSI BAR POLOS DENGAN CLIP PATH ---
     Image Bar(string name, Transform parent, Vector2 pos, Vector2 size, Color fillColor, out TMP_Text label, string text)
     {
-        // Wadah utama
-        var rt = Anchored(name, parent, new Vector2(0, 1), new Vector2(0, 1), pos, size);
+        var rt = Anchored(name, parent, TL, MID, pos, size);
 
-        // Gambar Latar Belakang (Gelap)
-        Img(Full("BG", rt, 0), roundSprite, Navy, Image.Type.Sliced);
+        var bg = Full("BG", rt, 0).gameObject.AddComponent<Image>();
+        bg.color = new Color(0.1f, 0.1f, 0.15f, 0.8f); 
         
-        // Area Mask (Clip Path)
         var maskArea = Full("MaskArea", rt, 2); 
         var maskImg = maskArea.gameObject.AddComponent<Image>();
-        maskImg.sprite = roundSprite;
-        maskImg.type = Image.Type.Sliced;
-        var mask = maskArea.gameObject.AddComponent<Mask>();
-        mask.showMaskGraphic = false; // Sembunyikan gambar mask aslinya
+        maskImg.color = Color.white; 
+        maskArea.gameObject.AddComponent<Mask>().showMaskGraphic = false; 
 
-        // Isi Bar (Warna Merah/Biru)
-        var fill = Img(Full("Fill", maskArea, 0), roundSprite, fillColor, Image.Type.Filled);
+        var fill = Full("Fill", maskArea, 0).gameObject.AddComponent<Image>();
+        fill.color = fillColor; 
+        fill.type = Image.Type.Filled; 
         fill.fillMethod = Image.FillMethod.Horizontal;
         fill.fillOrigin = 0;
         fill.fillAmount = 1f;
 
-        // Bingkai luar (Garis tepi transparan agar rapi)
-        var frame = Img(Full("Frame", rt, 0), roundSprite, new Color(1,1,1, 0.3f), Image.Type.Sliced);
+        var frame = Img(Full("Frame", rt, 0), roundSprite, new Color(1,1,1, 0.2f), Image.Type.Sliced);
         frame.raycastTarget = false;
 
-        // Teks Angka
-        label = Fill(rt, text, 22, TextAlignmentOptions.Center);
+        label = Fill(rt, text, 20, TextAlignmentOptions.Center);
         label.raycastTarget = false;
 
         return fill;
@@ -201,8 +211,6 @@ public class GameSceneBuilder : EditorWindow
     Button TopButton(Transform parent, int index)
     {
         var slot = Anchored(iconNames[index], parent, new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(80, 100));
-        
-        // Background tombol hitam transparan
         var slotImg = Img(slot, roundSprite, DarkTransparent, Image.Type.Sliced);
 
         var iconRT = Anchored("Icon", slot, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -10), new Vector2(60, 60));
@@ -221,7 +229,6 @@ public class GameSceneBuilder : EditorWindow
     // --- TOMBOL AKSI (KANAN BAWAH) HITAM TRANSPARAN ---
     Button ActionButton(Transform parent, int index, Vector2 pos, float size)
     {
-        // Lingkaran luar dihilangkan, langsung pakai face hitam transparan
         var ring = Anchored(iconNames[index] + " Button", parent, new Vector2(1, 0), new Vector2(0.5f, 0.5f), pos, new Vector2(size, size));
         
         var face = Full("Face", ring, 0);
