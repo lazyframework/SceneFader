@@ -4,7 +4,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using UnityEngine.InputSystem.UI; // Murni Input System Baru
+using UnityEngine.InputSystem.UI; 
 using TMPro;
 
 public class MainMenuBuilder : EditorWindow
@@ -46,7 +46,7 @@ public class MainMenuBuilder : EditorWindow
         scaler.matchWidthOrHeight = 0.5f;
 
         // EventSystem (MURNI INPUT SYSTEM BARU)
-        if (Object.FindFirstObjectByType<EventSystem>() == null)
+        if (Object.FindAnyObjectByType<EventSystem>() == null)
         {
             var eventSystemGO = new GameObject("EventSystem", typeof(EventSystem));
             eventSystemGO.AddComponent<InputSystemUIInputModule>();
@@ -230,6 +230,5 @@ public class MainMenuBuilder : EditorWindow
     {
         var anim = btnObj.AddComponent<MenuAnimator>();
         anim.delay = delay;
-        anim.rotateSpeed = 10f;
     }
 }
