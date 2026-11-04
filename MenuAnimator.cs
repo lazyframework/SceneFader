@@ -8,7 +8,6 @@ public class MenuAnimator : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
     public float animationDuration = 0.5f;
     public float delay = 0f;
     public float tapScale = 0.9f; 
-    public float rotateSpeed = 10f;
 
     private Vector3 originalScale;
     private bool isAnimating = false;
@@ -18,14 +17,6 @@ public class MenuAnimator : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
         originalScale = transform.localScale;
         transform.localScale = Vector3.zero; 
         StartCoroutine(AnimatePopIn());
-    }
-
-    void Update()
-    {
-        if (!isAnimating)
-        {
-            transform.Rotate(0, 0, rotateSpeed * Time.deltaTime);
-        }
     }
 
     IEnumerator AnimatePopIn()
@@ -45,11 +36,13 @@ public class MenuAnimator : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
         isAnimating = false;
     }
 
+    // Efek saat tombol ditekan/disentuh
     public void OnPointerDown(PointerEventData eventData)
     {
         if (!isAnimating) transform.localScale = originalScale * tapScale;
     }
 
+    // Efek saat jari/mouse dilepas
     public void OnPointerUp(PointerEventData eventData)
     {
         if (!isAnimating) transform.localScale = originalScale;
