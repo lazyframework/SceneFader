@@ -36,13 +36,11 @@ public class MenuAnimator : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
         isAnimating = false;
     }
 
-    // Efek saat tombol ditekan/disentuh
     public void OnPointerDown(PointerEventData eventData)
     {
         if (!isAnimating) transform.localScale = originalScale * tapScale;
     }
 
-    // Efek saat jari/mouse dilepas
     public void OnPointerUp(PointerEventData eventData)
     {
         if (!isAnimating) transform.localScale = originalScale;
