@@ -7,7 +7,6 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
 
-// Taruh di Assets/Editor
 public class MainMenuBuilder : EditorWindow
 {
     Sprite background, character;
@@ -16,14 +15,14 @@ public class MainMenuBuilder : EditorWindow
     string version    = "v1.0.0";
     string gameTitle  = "ETERNAL WORLD";
     string playerName = "PLAYER";
-    Vector2 margin    = new Vector2(70, 40);
+    Vector2 margin    = new Vector2(50, 40);
     Vector2 scrollPos;
 
     // --- PALET WARNA CYBER ---
     static readonly Color BrightBlue = new Color(0.1f, 0.45f, 1f);
     static readonly Color NeonBlue   = new Color(0.2f, 0.85f, 1f);
-    static readonly Color PanelDark  = new Color(0.02f, 0.08f, 0.22f, 0.82f);
-    static readonly Color BarDark    = new Color(0.02f, 0.06f, 0.18f, 0.80f);
+    static readonly Color PanelDark  = new Color(0.02f, 0.08f, 0.22f, 0.85f);
+    static readonly Color BarDark    = new Color(0.02f, 0.06f, 0.18f, 0.90f);
 
     Sprite slantSprite, slantOutline;
 
@@ -48,7 +47,7 @@ public class MainMenuBuilder : EditorWindow
         gameTitle  = EditorGUILayout.TextField("Judul Game", gameTitle);
         playerName = EditorGUILayout.TextField("Nama Player", playerName);
         version    = EditorGUILayout.TextField("Teks versi", version);
-        margin     = EditorGUILayout.Vector2Field("Jarak tepi (kiri/kanan, bawah)", margin);
+        margin     = EditorGUILayout.Vector2Field("Jarak tepi (kiri/kanan)", margin);
         EditorGUILayout.EndScrollView();
     }
 
@@ -62,7 +61,6 @@ public class MainMenuBuilder : EditorWindow
 
         CreateSprites();
 
-        // Canvas
         var canvasGO = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         canvasGO.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
         var scaler = canvasGO.GetComponent<CanvasScaler>();
@@ -77,14 +75,13 @@ public class MainMenuBuilder : EditorWindow
             es.AddComponent<StandaloneInputModule>();
         }
 
-        // Background
+        // Background & Karakter
         var bg = NewImage("Background", root, background, Color.white);
         bg.raycastTarget = false;
         Place(bg.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(100, 100));
         bg.gameObject.AddComponent<AutoFitBackground>();
         bg.gameObject.AddComponent<BackgroundAnimator>();
 
-        // Karakter (opsional, di tengah)
         if (character != null)
         {
             var chr = NewImage("Karakter", root, character, Color.white);
@@ -104,7 +101,12 @@ public class MainMenuBuilder : EditorWindow
         BuildTopLeftProfile(root);
         BuildTitle(root);
 
-        // --- BAR BAWAH ---
+        // --- KANAN ATAS: MAIL & EVENTS ---
+        var TR = new Vector2(1f, 1f);
+        var btnMail = MakeSmallTopButton(root, "BtnMail", "MAIL", new Vector2(-margin.x - 60, -30));
+        var btnEvents = MakeSmallTopButton(root, "BtnEvents", "EVENTS", new Vector2(-margin.x - 60, -100));
+
+        // --- BAR BAWAH & TOMBOL NAVIGASI UTAMA ---
         var bar = NewImage("BottomBar", root, null, BarDark);
         bar.raycastTarget = false;
         var br = bar.rectTransform;
@@ -112,7 +114,7 @@ public class MainMenuBuilder : EditorWindow
         br.anchorMax = new Vector2(1, 0);
         br.pivot = new Vector2(0.5f, 0);
         br.anchoredPosition = Vector2.zero;
-        br.sizeDelta = new Vector2(0, 110);
+        br.sizeDelta = new Vector2(0, 130);
 
         var topLine = NewImage("BarLine", bar.transform, null, NeonBlue);
         topLine.raycastTarget = false;
@@ -120,58 +122,59 @@ public class MainMenuBuilder : EditorWindow
         topLine.rectTransform.anchorMax = new Vector2(1, 1);
         topLine.rectTransform.sizeDelta = new Vector2(0, 3);
 
-        // --- TOMBOL NAVIGASI (kiri bawah): SHOP, SETTINGS, QUIT ---
+        // Tombol Bawah Kiri (Shop, Settings, Quit)
         var BL = new Vector2(0f, 0f);
-        Vector2 navSize = new Vector2(300, 76);
-        float navGap = 22f;
-        float navY = margin.y - 4;
+        Vector2 navSize = new Vector2(220, 65);
+        float navGap = 15f;
+        float navY = margin.y + 15;
 
-        var shop = MakeButton(root, "BtnShop", "SHOP", BL, BL,
-            new Vector2(margin.x, navY), navSize, false);
-        var settings = MakeButton(root, "BtnSettings", "SETTINGS", BL, BL,
-            new Vector2(margin.x + (navSize.x + navGap), navY), navSize, false);
-        var quit = MakeButton(root, "BtnQuit", "QUIT", BL, BL,
-            new Vector2(margin.x + (navSize.x + navGap) * 2, navY), navSize, false);
+        var shop = MakeButton(root, "BtnShop", "SHOP", BL, BL, new Vector2(margin.x, navY), navSize, false);
+        var settings = MakeButton(root, "BtnSettings", "SETTINGS", BL, BL, new Vector2(margin.x + (navSize.x + navGap), navY), navSize, false);
+        var quit = MakeButton(root, "BtnQuit", "QUIT", BL, BL, new Vector2(margin.x + (navSize.x + navGap) * 2, navY), navSize, false);
 
-        // --- START (kanan bawah, besar) ---
+        // Tombol Bawah Tengah (CHARACTER, INVENTORY)
+        Vector2 midSize = new Vector2(240, 75);
+        var btnChar = MakeButton(root, "BtnCharacter", "CHARACTER", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-130, navY - 5), midSize, false);
+        var btnInv = MakeButton(root, "BtnInventory", "INVENTORY", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(130, navY - 5), midSize, false);
+
+        // Tombol START (Kanan Bawah)
         var BR = new Vector2(1f, 0f);
-        Vector2 startSize = new Vector2(600, 128);
-        var start = MakeButton(root, "BtnStart", "START", BR, BR,
-            new Vector2(-margin.x, margin.y - 6), startSize, true);
+        Vector2 startSize = new Vector2(400, 100);
+        var start = MakeButton(root, "BtnStart", "START", BR, BR, new Vector2(-margin.x, navY - 10), startSize, true);
 
         // --- PANEL POP-UP ---
         var shopPanel = MakePanel(root, "ShopPanel", "SHOP");
-        var shopWin = shopPanel.transform.Find("Window");
-        var shopInfo = NewText("Info", shopWin, "Toko segera hadir...", 40);
-        shopInfo.color = new Color(0.8f, 0.92f, 1f);
-        Place(shopInfo.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(700, 80));
-
         var settingsPanel = MakePanel(root, "SettingsPanel", "SETTINGS");
+        
+        // Setup Slider di Settings
         var setWin = settingsPanel.transform.Find("Window");
         var volLabel = NewText("VolumeLabel", setWin, "VOLUME", 38);
-        volLabel.fontStyle = FontStyles.Bold | FontStyles.Italic;
         volLabel.alignment = TextAlignmentOptions.Left;
         Place(volLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-300, 30), new Vector2(300, 60));
         var slider = MakeSlider(setWin, new Vector2(80, 30), new Vector2(420, 40));
         slider.value = 1f;
         UnityEventTools.AddPersistentListener(slider.onValueChanged, lobbyUI.SetVolume);
 
-        // Hubungkan tombol
+        // Hubungkan Tombol
         UnityEventTools.AddPersistentListener(start.onClick, menu.StartGame);
         UnityEventTools.AddPersistentListener(quit.onClick, menu.QuitGame);
         UnityEventTools.AddBoolPersistentListener(shop.onClick, shopPanel.SetActive, true);
         UnityEventTools.AddBoolPersistentListener(settings.onClick, settingsPanel.SetActive, true);
 
+        // Animasi
         AddAnimation(shop.gameObject, 0.1f);
-        AddAnimation(settings.gameObject, 0.2f);
-        AddAnimation(quit.gameObject, 0.3f);
-        AddAnimation(start.gameObject, 0.4f);
+        AddAnimation(settings.gameObject, 0.15f);
+        AddAnimation(quit.gameObject, 0.2f);
+        AddAnimation(btnChar.gameObject, 0.25f);
+        AddAnimation(btnInv.gameObject, 0.3f);
+        AddAnimation(btnMail.gameObject, 0.35f);
+        AddAnimation(btnEvents.gameObject, 0.4f);
+        AddAnimation(start.gameObject, 0.5f);
 
-        // Panel disembunyikan di awal
         shopPanel.SetActive(false);
         settingsPanel.SetActive(false);
 
-        // Versi (kanan atas, kecil)
+        // Versi
         var ver = NewText("Version", root, version, 22);
         ver.alignment = TextAlignmentOptions.Right;
         ver.color = new Color(1f, 1f, 1f, 0.7f);
@@ -185,6 +188,31 @@ public class MainMenuBuilder : EditorWindow
         Selection.activeGameObject = canvasGO;
     }
 
+    // --- TOMBOL KECIL KANAN ATAS (Mail/Events) ---
+    Button MakeSmallTopButton(Transform root, string name, string label, Vector2 pos)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(root, false);
+        Place(go.GetComponent<RectTransform>(), new Vector2(1f, 1f), new Vector2(1f, 1f), pos, new Vector2(70, 70));
+
+        var bg = go.GetComponent<Image>();
+        bg.sprite = slantSprite;
+        bg.type = Image.Type.Sliced;
+        bg.color = PanelDark;
+
+        var border = NewImage("Outline", go.transform, slantOutline, Color.white);
+        border.type = Image.Type.Sliced;
+        Stretch(border.rectTransform);
+
+        var txt = NewText("Label", go.transform, label, 20);
+        txt.fontStyle = FontStyles.Bold;
+        Stretch(txt.rectTransform);
+
+        var btn = go.AddComponent<Button>();
+        btn.targetGraphic = bg;
+        return btn;
+    }
+
     // --- PROFIL KIRI ATAS ---
     void BuildTopLeftProfile(Transform root)
     {
@@ -195,11 +223,9 @@ public class MainMenuBuilder : EditorWindow
 
         var outline = NewImage("Outline", box.transform, slantOutline, Color.white);
         outline.type = Image.Type.Sliced;
-        outline.raycastTarget = false;
         Stretch(outline.rectTransform);
 
         var avatar = NewImage("Avatar", box.transform, null, new Color(0.15f, 0.3f, 0.6f, 1f));
-        avatar.raycastTarget = false;
         Place(avatar.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(40, 0), new Vector2(74, 74));
 
         var name = NewText("Name", box.transform, playerName, 34);
@@ -219,15 +245,13 @@ public class MainMenuBuilder : EditorWindow
         var t = NewText("Title", root, gameTitle, 76);
         t.fontStyle = FontStyles.Bold | FontStyles.Italic;
         t.characterSpacing = 6;
-        t.color = Color.white;
         t.outlineWidth = 0.2f;
         t.outlineColor = new Color32(20, 90, 255, 255);
         Place(t.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -30), new Vector2(900, 110));
     }
 
-    // --- TOMBOL CYBERPUNK: border putih ---
-    Button MakeButton(Transform parent, string name, string label, Vector2 anchor, Vector2 pivot,
-                      Vector2 pos, Vector2 size, bool isPrimary)
+    // --- TOMBOL UTAMA ---
+    Button MakeButton(Transform parent, string name, string label, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size, bool isPrimary)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(Image));
         go.transform.SetParent(parent, false);
@@ -238,60 +262,30 @@ public class MainMenuBuilder : EditorWindow
         bg.type = Image.Type.Sliced;
         bg.color = isPrimary ? BrightBlue : PanelDark;
 
-        // Glow tipis
         var shadow = go.AddComponent<Shadow>();
-        shadow.effectColor = isPrimary ? new Color(0.2f, 0.8f, 1f, 0.55f) : new Color(0f, 0.1f, 0.3f, 0.5f);
+        shadow.effectColor = new Color(0f, 0.1f, 0.3f, 0.5f);
         shadow.effectDistance = new Vector2(0, -5);
 
-        // Border PUTIH
         var border = NewImage("Outline", go.transform, slantOutline, Color.white);
         border.type = Image.Type.Sliced;
-        border.raycastTarget = false;
         Stretch(border.rectTransform);
 
-        // Aksen cyan miring di kiri
-        var accent = NewImage("Accent", go.transform, null, NeonBlue);
-        accent.raycastTarget = false;
-        Place(accent.rectTransform, new Vector2(0, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(40, 0),
-              new Vector2(isPrimary ? 8 : 6, size.y * 0.55f));
-        accent.rectTransform.localRotation = Quaternion.Euler(0, 0, -17);
-
-        // Garis tipis cyan di bawah (kesan cyber)
-        var under = NewImage("Underline", go.transform, null, NeonBlue);
-        under.raycastTarget = false;
-        Place(under.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 8),
-              new Vector2(size.x * 0.55f, 3));
-
-        var txt = NewText("Label", go.transform, label, isPrimary ? 56 : 32);
+        var txt = NewText("Label", go.transform, label, isPrimary ? 46 : 26);
         txt.fontStyle = FontStyles.Bold | FontStyles.Italic;
-        txt.characterSpacing = isPrimary ? 10 : 6;
-        txt.color = Color.white;
+        txt.characterSpacing = 4;
         Stretch(txt.rectTransform);
-
-        var arrow = NewText("Arrow", go.transform, "»", isPrimary ? 60 : 38);
-        arrow.color = isPrimary ? Color.white : NeonBlue;
-        arrow.fontStyle = FontStyles.Bold;
-        Place(arrow.rectTransform, new Vector2(1, 0.5f), new Vector2(1, 0.5f), new Vector2(-46, 2), new Vector2(44, 60));
 
         var btn = go.AddComponent<Button>();
         btn.targetGraphic = bg;
-        btn.transition = Selectable.Transition.ColorTint;
-        var c = btn.colors;
-        c.normalColor      = Color.white;
-        c.highlightedColor = new Color(0.65f, 0.9f, 1f);
-        c.pressedColor     = new Color(0.45f, 0.65f, 0.9f);
-        c.selectedColor    = Color.white;
-        c.fadeDuration     = 0.1f;
-        btn.colors = c;
         return btn;
     }
 
-    // --- PANEL POP-UP (Shop / Settings) ---
+    // --- PANEL POP-UP ---
     GameObject MakePanel(Transform root, string name, string title)
     {
-        var overlay = NewImage(name, root, null, new Color(0f, 0.02f, 0.08f, 0.7f));
+        var overlay = NewImage(name, root, null, new Color(0f, 0.02f, 0.08f, 0.8f));
         Stretch(overlay.rectTransform);
-        overlay.raycastTarget = true; // blok klik di belakang
+        overlay.raycastTarget = true; 
 
         var win = NewImage("Window", overlay.transform, slantSprite, new Color(0.03f, 0.1f, 0.26f, 0.95f));
         win.type = Image.Type.Sliced;
@@ -299,12 +293,10 @@ public class MainMenuBuilder : EditorWindow
 
         var outline = NewImage("Outline", win.transform, slantOutline, Color.white);
         outline.type = Image.Type.Sliced;
-        outline.raycastTarget = false;
         Stretch(outline.rectTransform);
 
         var t = NewText("Title", win.transform, title, 56);
         t.fontStyle = FontStyles.Bold | FontStyles.Italic;
-        t.characterSpacing = 8;
         Place(t.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -30), new Vector2(700, 80));
 
         var close = MakeButton(win.transform, "BtnClose", "CLOSE", new Vector2(0.5f, 0), new Vector2(0.5f, 0),
@@ -320,7 +312,6 @@ public class MainMenuBuilder : EditorWindow
         Place(go.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, size);
 
         var back = NewImage("Background", go.transform, null, new Color(1f, 1f, 1f, 0.15f));
-        back.raycastTarget = false;
         back.rectTransform.anchorMin = new Vector2(0, 0.35f);
         back.rectTransform.anchorMax = new Vector2(1, 0.65f);
         back.rectTransform.offsetMin = back.rectTransform.offsetMax = Vector2.zero;
@@ -333,7 +324,6 @@ public class MainMenuBuilder : EditorWindow
         far.offsetMin = far.offsetMax = Vector2.zero;
 
         var fill = NewImage("Fill", fillArea.transform, null, NeonBlue);
-        fill.raycastTarget = false;
         fill.rectTransform.sizeDelta = Vector2.zero;
 
         var handleArea = new GameObject("Handle Slide Area", typeof(RectTransform));
@@ -353,13 +343,12 @@ public class MainMenuBuilder : EditorWindow
         s.fillRect = fill.rectTransform;
         s.handleRect = handle.rectTransform;
         s.targetGraphic = handle;
-        s.direction = Slider.Direction.LeftToRight;
         s.minValue = 0f;
         s.maxValue = 1f;
         return s;
     }
 
-    // --- PEMBUAT SPRITE (Jajar Genjang) ---
+    // --- PEMBUAT SPRITE ---
     delegate bool InsideFn(float x, float y, float w, float h);
 
     void CreateSprites()
