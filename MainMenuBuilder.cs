@@ -4,13 +4,13 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using UnityEngine.InputSystem.UI; 
+using UnityEngine.InputSystem.UI;
 using TMPro;
 
 public class MainMenuBuilder : EditorWindow
 {
-    Sprite background, character, diamond;
-    TMP_FontAsset customFont; // Tambahan untuk Font Cinzel
+    Sprite background, character;
+    TMP_FontAsset customFont;
     string gameScene = "GameScene";
     string shopScene = "ShopScene";
 
@@ -19,17 +19,16 @@ public class MainMenuBuilder : EditorWindow
 
     void OnGUI()
     {
-        GUILayout.Label("Aset (boleh dikosongkan)", EditorStyles.boldLabel);
+        GUILayout.Label("Aset Menu Futuristik", EditorStyles.boldLabel);
         background = (Sprite)EditorGUILayout.ObjectField("Background", background, typeof(Sprite), false);
         character  = (Sprite)EditorGUILayout.ObjectField("Karakter", character, typeof(Sprite), false);
-        diamond    = (Sprite)EditorGUILayout.ObjectField("Sprite Tombol", diamond, typeof(Sprite), false);
-        customFont = (TMP_FontAsset)EditorGUILayout.ObjectField("Font Cinzel (TMP)", customFont, typeof(TMP_FontAsset), false);
+        customFont = (TMP_FontAsset)EditorGUILayout.ObjectField("Font TMP (Sci-Fi)", customFont, typeof(TMP_FontAsset), false);
         
         gameScene  = EditorGUILayout.TextField("Nama Scene Game", gameScene);
         shopScene  = EditorGUILayout.TextField("Nama Scene Shop", shopScene);
 
         GUILayout.Space(10);
-        if (GUILayout.Button("BANGUN MENU", GUILayout.Height(35))) Build();
+        if (GUILayout.Button("BANGUN MENU FUTURISTIK", GUILayout.Height(40))) Build();
     }
 
     void Build()
@@ -48,20 +47,21 @@ public class MainMenuBuilder : EditorWindow
         scaler.referenceResolution = new Vector2(1920, 1080);
         scaler.matchWidthOrHeight = 0.5f;
 
-        // EventSystem (Murni Input System Baru)
+        // EventSystem (Input System Baru)
         if (Object.FindAnyObjectByType<EventSystem>() == null)
         {
             var eventSystemGO = new GameObject("EventSystem", typeof(EventSystem));
             eventSystemGO.AddComponent<InputSystemUIInputModule>();
         }
 
-        // Background (Auto-Fit & Bergerak)
-        var bg = NewImage("Background", canvasGO.transform, background, new Color(0.1f, 0.1f, 0.2f));
+        // Background (AutoFit & Animasi)
+        var bg = NewImage("Background", canvasGO.transform, background, new Color(0.05f, 0.05f, 0.1f));
         bg.raycastTarget = false;
         bg.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
         bg.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
         bg.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         bg.rectTransform.anchoredPosition = Vector2.zero;
+        bg.rectTransform.sizeDelta = new Vector2(100, 100);
         bg.gameObject.AddComponent<AutoFitBackground>(); 
         bg.gameObject.AddComponent<BackgroundAnimator>(); 
 
@@ -78,39 +78,47 @@ public class MainMenuBuilder : EditorWindow
         // Manager
         var menu = new GameObject("MenuManager").AddComponent<MainMenu>();
 
-        // Panel Settings
-        var panel = NewImage("PanelSettings", canvasGO.transform, null, new Color(0, 0, 0, 0.85f));
+        // Panel Settings (Tema Gelap Transparan)
+        var panel = NewImage("PanelSettings", canvasGO.transform, null, new Color(0.02f, 0.05f, 0.1f, 0.95f));
         Stretch(panel.rectTransform);
-        NewText("SettingsTitle", panel.transform, "Settings", 48).rectTransform.anchoredPosition = new Vector2(0, 150);
-        NewText("VolumeLabel", panel.transform, "Volume", 32).rectTransform.anchoredPosition = new Vector2(0, 40);
+        NewText("SettingsTitle", panel.transform, "SYSTEM CONFIG", 48).rectTransform.anchoredPosition = new Vector2(0, 150);
+        
+        var volLabel = NewText("VolumeLabel", panel.transform, "AUDIO VOLUME", 24);
+        volLabel.rectTransform.anchoredPosition = new Vector2(0, 60);
+        volLabel.color = new Color(0.2f, 0.6f, 1f); // Biru Neon
 
         var sliderGO = NewSlider(panel.transform);
-        sliderGO.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, -20);
+        sliderGO.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 0);
 
         var settingsPanel = panel.gameObject.AddComponent<SettingsPanel>();
         var spSO = new SerializedObject(settingsPanel);
         spSO.FindProperty("volumeSlider").objectReferenceValue = sliderGO.GetComponent<Slider>();
         spSO.ApplyModifiedProperties();
 
-        var back = NewBox("BtnBack", panel.transform, "Back", new Vector2(0, -150), 260);
+        var back = NewFuturisticButton("BtnBack", panel.transform, "BACK TO MENU", new Vector2(0, -150), new Vector2(300, 60), TextAlignmentOptions.Center);
         UnityEventTools.AddPersistentListener(back.onClick, menu.CloseSettings);
         panel.gameObject.SetActive(false);
 
-        // Tombol utama
-        var start = NewDiamond("BtnStart",    canvasGO.transform, "START",    new Vector2(1, 0), new Vector2(-193, 220), 200);
-        var shop  = NewDiamond("BtnShop",     canvasGO.transform, "SHOP",     new Vector2(1, 0), new Vector2(-270, 365), 100);
-        var set   = NewDiamond("BtnSettings", canvasGO.transform, "SETTINGS", new Vector2(0, 0), new Vector2(220, 230),  200);
-        var quit  = NewDiamond("BtnQuit",     canvasGO.transform, "QUIT",     new Vector2(0, 0), new Vector2(373, 160),  100);
+        // --- TOMBOL UTAMA FUTURISTIK (Kanan Layar) ---
+        float startX = -150; // Posisi X dari kanan
+        float startY = 150;
 
+        var start = NewFuturisticButton("BtnStart", canvasGO.transform, "START GAME", new Vector2(startX, startY), new Vector2(320, 70), TextAlignmentOptions.Center);
+        var shop  = NewFuturisticButton("BtnShop", canvasGO.transform, "SHOP", new Vector2(startX, startY - 90), new Vector2(320, 70), TextAlignmentOptions.Center);
+        var set   = NewFuturisticButton("BtnSettings", canvasGO.transform, "SETTINGS", new Vector2(startX, startY - 180), new Vector2(320, 70), TextAlignmentOptions.Center);
+        var quit  = NewFuturisticButton("BtnQuit", canvasGO.transform, "QUIT", new Vector2(startX, startY - 270), new Vector2(320, 70), TextAlignmentOptions.Center);
+
+        // Event Tombol
         UnityEventTools.AddPersistentListener(start.onClick, menu.StartGame);
         UnityEventTools.AddPersistentListener(shop.onClick,  menu.OpenShop);
         UnityEventTools.AddPersistentListener(set.onClick,   menu.OpenSettings);
         UnityEventTools.AddPersistentListener(quit.onClick,  menu.QuitGame);
 
-        AddAnimation(start.gameObject, 0.2f);
-        AddAnimation(shop.gameObject, 0.4f);
-        AddAnimation(set.gameObject, 0.6f);
-        AddAnimation(quit.gameObject, 0.8f);
+        // Animasi
+        AddAnimation(start.gameObject, 0.1f);
+        AddAnimation(shop.gameObject, 0.2f);
+        AddAnimation(set.gameObject, 0.3f);
+        AddAnimation(quit.gameObject, 0.4f);
 
         panel.transform.SetAsLastSibling();
 
@@ -124,7 +132,64 @@ public class MainMenuBuilder : EditorWindow
         Selection.activeGameObject = canvasGO;
     }
 
-    // ---------- Helper ----------
+    // --- FUNGSI PEMBUAT TOMBOL FUTURISTIK ---
+    Button NewFuturisticButton(string name, Transform parent, string label, Vector2 anchoredPos, Vector2 size, TextAlignmentOptions align)
+    {
+        var btnObj = new GameObject(name, typeof(RectTransform), typeof(Image));
+        btnObj.transform.SetParent(parent, false);
+        
+        var rt = btnObj.GetComponent<RectTransform>();
+        
+        // Jika berada di dalam PanelSettings, gunakan Anchor Tengah
+        if (parent.name == "PanelSettings")
+        {
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+        }
+        else
+        {
+            rt.anchorMin = rt.anchorMax = new Vector2(1f, 0.5f); // Kanan tengah
+            rt.pivot = new Vector2(1f, 0.5f);
+        }
+        
+        rt.anchoredPosition = anchoredPos;
+        rt.sizeDelta = size;
+        
+        // Efek miring (Skew) 10 derajat
+        rt.localRotation = Quaternion.Euler(0, 0, -10);
+
+        var bgImage = btnObj.GetComponent<Image>();
+        bgImage.color = new Color(0.05f, 0.05f, 0.1f, 0.8f);
+
+        var outline = btnObj.AddComponent<Outline>();
+        outline.effectColor = new Color(0.2f, 0.8f, 1f, 0.8f); 
+        outline.effectDistance = new Vector2(2f, 2f);
+
+        var accent = NewImage("Accent", btnObj.transform, null, new Color(0.2f, 0.8f, 1f));
+        var aRt = accent.rectTransform;
+        aRt.anchorMin = aRt.anchorMax = new Vector2(0f, 0.5f);
+        aRt.pivot = new Vector2(0f, 0.5f);
+        aRt.anchoredPosition = new Vector2(-10, 0);
+        aRt.sizeDelta = new Vector2(20, 4);
+
+        var txt = NewText("Label", btnObj.transform, label, 32);
+        txt.fontStyle = FontStyles.Bold;
+        Stretch(txt.rectTransform);
+        txt.rectTransform.localRotation = Quaternion.Euler(0, 0, 10); // Teks tegak lurus
+        txt.alignment = align;
+
+        var btn = btnObj.AddComponent<Button>();
+        var colors = btn.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(0.2f, 0.8f, 1f, 0.4f); 
+        colors.pressedColor = new Color(0.2f, 0.8f, 1f, 0.8f);
+        colors.fadeDuration = 0.1f;
+        btn.colors = colors;
+
+        return btn;
+    }
+
+    // --- HELPER ---
     Image NewImage(string name, Transform parent, Sprite s, Color c)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(Image));
@@ -145,10 +210,7 @@ public class MainMenuBuilder : EditorWindow
         t.alignment = TextAlignmentOptions.Center;
         t.color = Color.white;
         t.raycastTarget = false;
-        
         if (customFont != null) t.font = customFont;
-        
-        t.rectTransform.sizeDelta = new Vector2(600, 100);
         return t;
     }
 
@@ -159,81 +221,26 @@ public class MainMenuBuilder : EditorWindow
         r.offsetMin = r.offsetMax = Vector2.zero;
     }
 
-    Button NewDiamond(string name, Transform parent, string label, Vector2 anchor, Vector2 pos, float size)
-    {
-        var img = NewImage(name, parent, diamond, new Color(0.04f, 0.04f, 0.07f, 0.92f));
-        var rt = img.rectTransform;
-        rt.anchorMin = rt.anchorMax = anchor;
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = pos;
-        rt.sizeDelta = new Vector2(size, size);
-        rt.localRotation = Quaternion.Euler(0, 0, 45);
-
-        var outline = img.gameObject.AddComponent<Outline>();
-        outline.effectColor = new Color(1, 1, 1, 0.3f);
-        outline.effectDistance = new Vector2(2, 2);
-
-        var btn = img.gameObject.AddComponent<Button>();
-        Colorize(btn);
-
-        // Garis Dekorasi Kiri
-        var lineLeft = NewImage("LineLeft", img.transform, null, new Color(1, 1, 1, 0.5f));
-        var lL = lineLeft.rectTransform;
-        lL.anchorMin = lL.anchorMax = new Vector2(0.5f, 0.5f);
-        lL.pivot = new Vector2(0.5f, 0.5f);
-        lL.anchoredPosition = new Vector2(-size * 0.35f, 0);
-        lL.sizeDelta = new Vector2(2, size * 0.3f);
-
-        // Garis Dekorasi Kanan
-        var lineRight = NewImage("LineRight", img.transform, null, new Color(1, 1, 1, 0.5f));
-        var lR = lineRight.rectTransform;
-        lR.anchorMin = lR.anchorMax = new Vector2(0.5f, 0.5f);
-        lR.pivot = new Vector2(0.5f, 0.5f);
-        lR.anchoredPosition = new Vector2(size * 0.35f, 0);
-        lR.sizeDelta = new Vector2(2, size * 0.3f);
-
-        var txt = NewText("Label", img.transform, label.ToUpper(), size * 0.14f);
-        Stretch(txt.rectTransform);
-        txt.rectTransform.localRotation = Quaternion.Euler(0, 0, -45);
-        
-        if (customFont != null) txt.fontSize = size * 0.12f;
-
-        return btn;
-    }
-
-    Button NewBox(string name, Transform parent, string label, Vector2 pos, float w)
-    {
-        var img = NewImage(name, parent, null, new Color(0.05f, 0.05f, 0.1f, 0.95f));
-        var rt = img.rectTransform;
-        rt.anchoredPosition = pos;
-        rt.sizeDelta = new Vector2(w, 70);
-        var btn = img.gameObject.AddComponent<Button>();
-        Colorize(btn);
-        var txt = NewText("Label", img.transform, label, 30);
-        Stretch(txt.rectTransform);
-        return btn;
-    }
-
     GameObject NewSlider(Transform parent)
     {
         var root = new GameObject("VolumeSlider", typeof(RectTransform), typeof(Slider));
         root.transform.SetParent(parent, false);
-        root.GetComponent<RectTransform>().sizeDelta = new Vector2(500, 30);
+        root.GetComponent<RectTransform>().sizeDelta = new Vector2(600, 20);
 
-        var back = NewImage("Background", root.transform, null, new Color(1, 1, 1, 0.2f));
+        var back = NewImage("Background", root.transform, null, new Color(0.2f, 0.3f, 0.4f, 0.5f));
         Stretch(back.rectTransform);
 
         var fillArea = new GameObject("Fill Area", typeof(RectTransform));
         fillArea.transform.SetParent(root.transform, false);
         Stretch(fillArea.GetComponent<RectTransform>());
-        var fill = NewImage("Fill", fillArea.transform, null, new Color(0.3f, 0.8f, 1f));
+        var fill = NewImage("Fill", fillArea.transform, null, new Color(0.2f, 0.8f, 1f)); 
         Stretch(fill.rectTransform);
 
         var handleArea = new GameObject("Handle Area", typeof(RectTransform));
         handleArea.transform.SetParent(root.transform, false);
         Stretch(handleArea.GetComponent<RectTransform>());
         var handle = NewImage("Handle", handleArea.transform, null, Color.white);
-        handle.rectTransform.sizeDelta = new Vector2(24, 40);
+        handle.rectTransform.sizeDelta = new Vector2(15, 30);
 
         var s = root.GetComponent<Slider>();
         s.fillRect = fill.rectTransform;
@@ -242,16 +249,6 @@ public class MainMenuBuilder : EditorWindow
         s.minValue = 0;
         s.maxValue = 1;
         return root;
-    }
-
-    void Colorize(Button b)
-    {
-        var c = b.colors;
-        c.normalColor = Color.white;
-        c.highlightedColor = new Color(0.6f, 0.9f, 1f);
-        c.pressedColor = new Color(0.4f, 0.6f, 0.8f);
-        c.fadeDuration = 0.1f;
-        b.colors = c;
     }
 
     void AddAnimation(GameObject btnObj, float delay)
