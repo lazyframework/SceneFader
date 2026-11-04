@@ -22,7 +22,7 @@ public class GameSceneBuilder : EditorWindow
     static readonly Color Red = new Color(1f, 0.1f, 0.1f);  
     static readonly Color Cyan = new Color(0.1f, 0.6f, 1f); 
     static readonly Color Gold = new Color(1f, 0.82f, 0.2f);
-    static readonly Color DarkTransparent = new Color(0.05f, 0.05f, 0.05f, 0.7f);
+    static readonly Color DarkTransparent = new Color(0.05f, 0.05f, 0.05f, 0.65f); // Lebih transparan
     static readonly Color MapBorderBlue = new Color(0.2f, 0.6f, 1f, 1f);
 
     Sprite logo, avatar;
@@ -35,10 +35,7 @@ public class GameSceneBuilder : EditorWindow
 
     void OnGUI()
     {
-        if (GUILayout.Button("BANGUN HUD", GUILayout.Height(40)))
-        {
-            Build();
-        }
+        if (GUILayout.Button("BANGUN HUD", GUILayout.Height(40))) Build();
 
         GUILayout.Space(10);
         GUILayout.Label("Aset (boleh dikosongkan)", EditorStyles.boldLabel);
@@ -76,45 +73,57 @@ public class GameSceneBuilder : EditorWindow
 
         var hud = new GameObject("HUDManager").AddComponent<GameHUD>();
 
-        // --- KIRI ATAS: KARTU PEMAIN (MENYATU TANPA BACKGROUND) ---
-        var card = Anchored("PlayerCard", root, TL, TL, new Vector2(30, -30), new Vector2(550, 160));
+        // ==========================================
+        // KIRI ATAS: KARTU PEMAIN (SUPER RAPI)
+        // ==========================================
+        var card = Anchored("PlayerCard", root, TL, TL, new Vector2(30, -30), new Vector2(500, 150));
 
-        // 1. AVATAR (Tanpa Background/Border)
-        var avatarObj = Anchored("Avatar", card, TL, MID, new Vector2(75, 0), new Vector2(140, 140));
+        // 1. Avatar (Ukuran pas 120x120, menempel di kiri)
+        var avatarObj = Anchored("Avatar", card, TL, MID, new Vector2(70, 0), new Vector2(120, 120));
         var avatarImg = avatarObj.gameObject.AddComponent<Image>();
         avatarImg.sprite = avatar;
-        // Jika avatar kosong di Builder, beri warna abu transparan agar tetap terlihat
-        avatarImg.color = avatar != null ? Color.white : new Color(0.1f, 0.1f, 0.1f, 0.5f);
+        avatarImg.color = avatar != null ? Color.white : new Color(0.15f, 0.15f, 0.2f, 0.8f);
+        avatarObj.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+
+        // 2. Level Badge (Nempel manis di pojok kanan atas avatar)
+        var lv = Anchored("LevelBadge", card, TL, MID, new Vector2(115, 45), new Vector2(65, 24));
+        var lvImg = Img(lv, roundSprite, Navy, Image.Type.Sliced);
+        lvImg.gameObject.AddComponent<Shadow>().effectColor = Color.black;
+        Fill(lv, "Lv.1", 18, TextAlignmentOptions.Center);
+
+        // 3. Bar HP & MP (Jarak antar bar lebih rapi)
+        var hpFill = Bar("HPBar", card, new Vector2(140, 16), new Vector2(340, 28), Red, out TMP_Text hpText, "HP 100/100");
+        var mpFill = Bar("MPBar", card, new Vector2(140, -18), new Vector2(340, 28), Cyan, out TMP_Text mpText, "MP 100/100");
+
+        // ==========================================
+        // KIRI ATAS: QUEST (Lebih Bersih)
+        // ==========================================
+        var quest = Anchored("QuestPanel", root, TL, TL, new Vector2(30, -190), new Vector2(500, 130));
+        Img(quest, roundSprite, new Color(0.04f, 0.06f, 0.14f, 0.5f), Image.Type.Sliced);
         
-        // Masking bulat untuk Avatar
-        var mask = avatarObj.gameObject.AddComponent<Mask>();
-        mask.showMaskGraphic = true;
+        // Garis aksen kuning di kiri quest
+        var accent = Anchored("Accent", quest, TL, TL, new Vector2(0, 0), new Vector2(6, 130));
+        Img(accent, null, Gold);
 
-        // 2. LEVEL (Nempel di kanan atas Avatar)
-        var lv = Anchored("LevelBadge", card, TL, MID, new Vector2(130, 50), new Vector2(70, 26));
-        Img(lv, roundSprite, Navy, Image.Type.Sliced);
-        Fill(lv, "Lv.1", 20, TextAlignmentOptions.Center);
+        TextAt("QuestTitle", quest, new Vector2(30, -18), new Vector2(440, 40), "Main Quest", 26, Gold, TextAlignmentOptions.Left);
+        TextAt("QuestDesc", quest, new Vector2(30, -60), new Vector2(440, 36), "Go to the City Center", 22, Color.white, TextAlignmentOptions.Left);
 
-        // 3. BAR HP/MP (Menempel langsung di sebelah kanan Avatar)
-        var hpFill = Bar("HPBar", card, new Vector2(145, 15), new Vector2(370, 30), Red, out TMP_Text hpText, "HP 100/100");
-        var mpFill = Bar("MPBar", card, new Vector2(145, -20), new Vector2(370, 30), Cyan, out TMP_Text mpText, "MP 100/100");
-
-
-        // --- KIRI ATAS: QUEST ---
-        var quest = Anchored("QuestPanel", root, TL, TL, new Vector2(30, -200), new Vector2(560, 150));
-        Img(quest, roundSprite, new Color(0.04f, 0.06f, 0.14f, 0.6f), Image.Type.Sliced);
-        TextAt("QuestTitle", quest, new Vector2(100, -18), new Vector2(440, 40), "Main Quest", 28, Gold, TextAlignmentOptions.Left);
-        TextAt("QuestDesc", quest, new Vector2(100, -62), new Vector2(440, 36), "Go to the City Center", 24, Color.white, TextAlignmentOptions.Left);
-
-        // --- TENGAH ATAS: LOGO ---
+        // ==========================================
+        // TENGAH ATAS: LOGO
+        // ==========================================
         var logoRT = Anchored("Logo", root, TC, TC, new Vector2(0, -20), new Vector2(420, 130));
         if (logo != null) Img(logoRT, logo, Color.white).preserveAspect = true;
-        else Fill(logoRT, "Eternal World", 56, TextAlignmentOptions.Center);
+        else {
+            var logoText = Fill(logoRT, "Eternal World", 56, TextAlignmentOptions.Center);
+            logoText.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.8f);
+        }
 
-        // --- KANAN ATAS: MENU ---
-        var topBar = Anchored("TopButtons", root, TR, TR, new Vector2(-30, -30), new Vector2(600, 100));
+        // ==========================================
+        // KANAN ATAS: MENU
+        // ==========================================
+        var topBar = Anchored("TopButtons", root, TR, TR, new Vector2(-30, -30), new Vector2(500, 90));
         var hlg = topBar.gameObject.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 34;
+        hlg.spacing = 20;
         hlg.childAlignment = TextAnchor.MiddleRight;
         hlg.childControlWidth = false;
         hlg.childControlHeight = false;
@@ -124,9 +133,19 @@ public class GameSceneBuilder : EditorWindow
         var btnBag = TopButton(topBar, 2);
         var btnMenu = TopButton(topBar, 3);
 
-        // --- KANAN ATAS: MINIMAP (BORDER BIRU) ---
-        var mini = Anchored("Minimap", root, TR, TR, new Vector2(-40, -150), new Vector2(230, 230));
-        var border = Full("Border", mini, -4); 
+        // ==========================================
+        // KANAN ATAS: MINIMAP (BORDER BIRU & SHADOW)
+        // ==========================================
+        var mini = Anchored("Minimap", root, TR, TR, new Vector2(-40, -140), new Vector2(200, 200));
+        
+        // Shadow Minimap
+        var shadow = Full("Shadow", mini, -5);
+        var shadowImg = shadow.gameObject.AddComponent<Image>();
+        shadowImg.sprite = circleSprite;
+        shadowImg.color = new Color(0,0,0,0.5f);
+
+        // Border Biru
+        var border = Full("Border", mini, -3); 
         var borderImg = border.gameObject.AddComponent<Image>();
         borderImg.sprite = circleSprite;
         borderImg.color = MapBorderBlue;
@@ -134,7 +153,7 @@ public class GameSceneBuilder : EditorWindow
         var inner = Full("Inner", mini, 0);
         var innerImg = inner.gameObject.AddComponent<Image>();
         innerImg.sprite = circleSprite;
-        innerImg.color = new Color(0, 0, 0, 0.5f); 
+        innerImg.color = new Color(0, 0, 0, 0.6f); 
 
         var miniMask = Full("MinimapMask", inner, 0);
         var maskImg = miniMask.gameObject.AddComponent<Image>();
@@ -145,17 +164,21 @@ public class GameSceneBuilder : EditorWindow
         raw.texture = minimapTexture;
         raw.color = minimapTexture != null ? Color.white : new Color(0.1f, 0.1f, 0.15f, 0.8f);
 
-        // --- KANAN BAWAH: TOMBOL AKSI ---
-        var btnRun = ActionButton(root, 4, new Vector2(-89, 368), 126);
-        var btnSkill1 = ActionButton(root, 5, new Vector2(-244, 288), 126);
-        var btnSkill2 = ActionButton(root, 6, new Vector2(-359, 162), 138);
-        var btnAttack = ActionButton(root, 7, new Vector2(-135, 162), 172);
-        var btnJump = ActionButton(root, 8, new Vector2(-250, 64), 86);
+        // ==========================================
+        // KANAN BAWAH: TOMBOL AKSI
+        // ==========================================
+        var btnRun = ActionButton(root, 4, new Vector2(-100, 360), 110);
+        var btnSkill1 = ActionButton(root, 5, new Vector2(-240, 280), 120);
+        var btnSkill2 = ActionButton(root, 6, new Vector2(-360, 160), 130);
+        var btnAttack = ActionButton(root, 7, new Vector2(-140, 150), 160);
+        var btnJump = ActionButton(root, 8, new Vector2(-260, 60), 80);
 
-        // --- KIRI BAWAH: JOYSTICK ---
-        var joyRing = Anchored("JoystickArea", root, BL, MID, new Vector2(212, 248), new Vector2(260, 260));
-        Img(joyRing, circleSprite, new Color(1, 1, 1, 0.1f)); 
-        Img(Full("JoystickKnob", joyRing, 80), circleSprite, new Color(1, 1, 1, 0.25f));
+        // ==========================================
+        // KIRI BAWAH: JOYSTICK
+        // ==========================================
+        var joyRing = Anchored("JoystickArea", root, BL, MID, new Vector2(200, 200), new Vector2(240, 240));
+        Img(joyRing, circleSprite, new Color(0, 0, 0, 0.2f)); // Latar hitam transparan
+        Img(Full("JoystickKnob", joyRing, 70), circleSprite, new Color(1, 1, 1, 0.4f)); // Knob putih pudar
 
         // Sambungkan Event Tombol
         UnityEventTools.AddPersistentListener(btnReward.onClick, hud.OnReward);
@@ -178,19 +201,22 @@ public class GameSceneBuilder : EditorWindow
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
     }
 
-    // --- FUNGSI BAR POLOS DENGAN CLIP PATH ---
+    // --- FUNGSI BAR HP/MP (UJUNG MEMBULAT & RAPI) ---
     Image Bar(string name, Transform parent, Vector2 pos, Vector2 size, Color fillColor, out TMP_Text label, string text)
     {
         var rt = Anchored(name, parent, TL, MID, pos, size);
 
-        var bg = Full("BG", rt, 0).gameObject.AddComponent<Image>();
-        bg.color = new Color(0.1f, 0.1f, 0.15f, 0.8f); 
+        // Background Gelap dengan ujung membulat (Sliced)
+        var bg = Img(Full("BG", rt, 0), roundSprite, new Color(0.1f, 0.1f, 0.15f, 0.9f), Image.Type.Sliced);
         
+        // Mask Area
         var maskArea = Full("MaskArea", rt, 2); 
         var maskImg = maskArea.gameObject.AddComponent<Image>();
-        maskImg.color = Color.white; 
+        maskImg.sprite = roundSprite; 
+        maskImg.type = Image.Type.Sliced;
         maskArea.gameObject.AddComponent<Mask>().showMaskGraphic = false; 
 
+        // Fill
         var fill = Full("Fill", maskArea, 0).gameObject.AddComponent<Image>();
         fill.color = fillColor; 
         fill.type = Image.Type.Filled; 
@@ -198,27 +224,35 @@ public class GameSceneBuilder : EditorWindow
         fill.fillOrigin = 0;
         fill.fillAmount = 1f;
 
-        var frame = Img(Full("Frame", rt, 0), roundSprite, new Color(1,1,1, 0.2f), Image.Type.Sliced);
+        // Frame Tepi (Garis putih tipis)
+        var frame = Img(Full("Frame", rt, 0), roundSprite, new Color(1,1,1, 0.4f), Image.Type.Sliced);
         frame.raycastTarget = false;
 
-        label = Fill(rt, text, 20, TextAlignmentOptions.Center);
+        // Teks dengan Shadow agar terbaca
+        label = Fill(rt, text, 18, TextAlignmentOptions.Center);
+        label.gameObject.AddComponent<Shadow>().effectColor = new Color(0,0,0,0.8f);
         label.raycastTarget = false;
 
         return fill;
     }
 
-    // --- TOMBOL MENU (KANAN ATAS) HITAM TRANSPARAN ---
+    // --- TOMBOL MENU (KANAN ATAS) ---
     Button TopButton(Transform parent, int index)
     {
-        var slot = Anchored(iconNames[index], parent, new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(80, 100));
+        var slot = Anchored(iconNames[index], parent, new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(70, 90));
         var slotImg = Img(slot, roundSprite, DarkTransparent, Image.Type.Sliced);
+        
+        // Shadow di belakang tombol
+        var shadow = slot.gameObject.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0,0,0,0.5f);
+        shadow.effectDistance = new Vector2(2, -2);
 
-        var iconRT = Anchored("Icon", slot, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -10), new Vector2(60, 60));
+        var iconRT = Anchored("Icon", slot, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -10), new Vector2(50, 50));
         Sprite icon = icons[index] != null ? icons[index] : circleSprite;
         Img(iconRT, icon, Color.white);
 
-        var labelRT = Anchored("Label", slot, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 10), new Vector2(80, 30));
-        AddText(labelRT, iconNames[index], 18, TextAlignmentOptions.Center, Color.white);
+        var labelRT = Anchored("Label", slot, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 10), new Vector2(70, 30));
+        AddText(labelRT, iconNames[index], 16, TextAlignmentOptions.Center, Color.white);
 
         var btn = slot.gameObject.AddComponent<Button>();
         btn.targetGraphic = slotImg;
@@ -226,18 +260,23 @@ public class GameSceneBuilder : EditorWindow
         return btn;
     }
 
-    // --- TOMBOL AKSI (KANAN BAWAH) HITAM TRANSPARAN ---
+    // --- TOMBOL AKSI (KANAN BAWAH) ---
     Button ActionButton(Transform parent, int index, Vector2 pos, float size)
     {
         var ring = Anchored(iconNames[index] + " Button", parent, new Vector2(1, 0), new Vector2(0.5f, 0.5f), pos, new Vector2(size, size));
         
+        // Shadow di belakang tombol
+        var shadow = ring.gameObject.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0,0,0,0.6f);
+        shadow.effectDistance = new Vector2(3, -3);
+
         var face = Full("Face", ring, 0);
         var faceImg = Img(face, circleSprite, DarkTransparent);
 
         if (icons[index] != null) 
-            Img(Full("Icon", face, size * 0.22f), icons[index], Color.white);
+            Img(Full("Icon", face, size * 0.25f), icons[index], Color.white);
         else 
-            AddText(Full("Label", face, 0), iconNames[index], size > 100 ? 22 : 18, TextAlignmentOptions.Center, Color.white);
+            AddText(Full("Label", face, 0), iconNames[index], size > 100 ? 20 : 16, TextAlignmentOptions.Center, Color.white);
 
         var btn = face.gameObject.AddComponent<Button>();
         btn.targetGraphic = faceImg;
