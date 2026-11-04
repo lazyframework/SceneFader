@@ -4,7 +4,6 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using UnityEngine.InputSystem.UI;
 using TMPro;
 
 public class MainMenuBuilder : EditorWindow
@@ -47,14 +46,14 @@ public class MainMenuBuilder : EditorWindow
         scaler.referenceResolution = new Vector2(1920, 1080);
         scaler.matchWidthOrHeight = 0.5f;
 
-        // EventSystem (Input System Baru)
+        // EventSystem (INPUT LAMA / STandalone)
         if (Object.FindAnyObjectByType<EventSystem>() == null)
         {
             var eventSystemGO = new GameObject("EventSystem", typeof(EventSystem));
-            eventSystemGO.AddComponent<InputSystemUIInputModule>();
+            eventSystemGO.AddComponent<StandaloneInputModule>();
         }
 
-        // Background (AutoFit & Animasi)
+        // Background
         var bg = NewImage("Background", canvasGO.transform, background, new Color(0.05f, 0.05f, 0.1f));
         bg.raycastTarget = false;
         bg.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
@@ -78,14 +77,14 @@ public class MainMenuBuilder : EditorWindow
         // Manager
         var menu = new GameObject("MenuManager").AddComponent<MainMenu>();
 
-        // Panel Settings (Tema Gelap Transparan)
+        // Panel Settings
         var panel = NewImage("PanelSettings", canvasGO.transform, null, new Color(0.02f, 0.05f, 0.1f, 0.95f));
         Stretch(panel.rectTransform);
         NewText("SettingsTitle", panel.transform, "SYSTEM CONFIG", 48).rectTransform.anchoredPosition = new Vector2(0, 150);
         
         var volLabel = NewText("VolumeLabel", panel.transform, "AUDIO VOLUME", 24);
         volLabel.rectTransform.anchoredPosition = new Vector2(0, 60);
-        volLabel.color = new Color(0.2f, 0.6f, 1f); // Biru Neon
+        volLabel.color = new Color(0.2f, 0.6f, 1f);
 
         var sliderGO = NewSlider(panel.transform);
         sliderGO.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 0);
@@ -99,8 +98,8 @@ public class MainMenuBuilder : EditorWindow
         UnityEventTools.AddPersistentListener(back.onClick, menu.CloseSettings);
         panel.gameObject.SetActive(false);
 
-        // --- TOMBOL UTAMA FUTURISTIK (Kanan Layar) ---
-        float startX = -150; // Posisi X dari kanan
+        // Tombol utama
+        float startX = -150; 
         float startY = 150;
 
         var start = NewFuturisticButton("BtnStart", canvasGO.transform, "START GAME", new Vector2(startX, startY), new Vector2(320, 70), TextAlignmentOptions.Center);
@@ -108,13 +107,11 @@ public class MainMenuBuilder : EditorWindow
         var set   = NewFuturisticButton("BtnSettings", canvasGO.transform, "SETTINGS", new Vector2(startX, startY - 180), new Vector2(320, 70), TextAlignmentOptions.Center);
         var quit  = NewFuturisticButton("BtnQuit", canvasGO.transform, "QUIT", new Vector2(startX, startY - 270), new Vector2(320, 70), TextAlignmentOptions.Center);
 
-        // Event Tombol
         UnityEventTools.AddPersistentListener(start.onClick, menu.StartGame);
         UnityEventTools.AddPersistentListener(shop.onClick,  menu.OpenShop);
         UnityEventTools.AddPersistentListener(set.onClick,   menu.OpenSettings);
         UnityEventTools.AddPersistentListener(quit.onClick,  menu.QuitGame);
 
-        // Animasi
         AddAnimation(start.gameObject, 0.1f);
         AddAnimation(shop.gameObject, 0.2f);
         AddAnimation(set.gameObject, 0.3f);
@@ -132,7 +129,7 @@ public class MainMenuBuilder : EditorWindow
         Selection.activeGameObject = canvasGO;
     }
 
-    // --- FUNGSI PEMBUAT TOMBOL FUTURISTIK ---
+    // --- FUNGSI TOMBOL FUTURISTIK ---
     Button NewFuturisticButton(string name, Transform parent, string label, Vector2 anchoredPos, Vector2 size, TextAlignmentOptions align)
     {
         var btnObj = new GameObject(name, typeof(RectTransform), typeof(Image));
@@ -140,7 +137,6 @@ public class MainMenuBuilder : EditorWindow
         
         var rt = btnObj.GetComponent<RectTransform>();
         
-        // Jika berada di dalam PanelSettings, gunakan Anchor Tengah
         if (parent.name == "PanelSettings")
         {
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
@@ -148,14 +144,12 @@ public class MainMenuBuilder : EditorWindow
         }
         else
         {
-            rt.anchorMin = rt.anchorMax = new Vector2(1f, 0.5f); // Kanan tengah
+            rt.anchorMin = rt.anchorMax = new Vector2(1f, 0.5f);
             rt.pivot = new Vector2(1f, 0.5f);
         }
         
         rt.anchoredPosition = anchoredPos;
         rt.sizeDelta = size;
-        
-        // Efek miring (Skew) 10 derajat
         rt.localRotation = Quaternion.Euler(0, 0, -10);
 
         var bgImage = btnObj.GetComponent<Image>();
@@ -175,7 +169,7 @@ public class MainMenuBuilder : EditorWindow
         var txt = NewText("Label", btnObj.transform, label, 32);
         txt.fontStyle = FontStyles.Bold;
         Stretch(txt.rectTransform);
-        txt.rectTransform.localRotation = Quaternion.Euler(0, 0, 10); // Teks tegak lurus
+        txt.rectTransform.localRotation = Quaternion.Euler(0, 0, 10);
         txt.alignment = align;
 
         var btn = btnObj.AddComponent<Button>();
