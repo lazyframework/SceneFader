@@ -18,8 +18,8 @@ public class MainMenuBuilder : EditorWindow
     Vector2 margin    = new Vector2(50, 40);
     Vector2 scrollPos;
 
-    // --- PALET WARNA CYBER ---
-    static readonly Color BrightBlue = new Color(0.1f, 0.45f, 1f);
+    // --- PALET WARNA (BIRU TERANG) ---
+    static readonly Color BrightBlue = new Color(0.1f, 0.55f, 1f); // Biru Terang
     static readonly Color NeonBlue   = new Color(0.2f, 0.85f, 1f);
     static readonly Color PanelDark  = new Color(0.02f, 0.08f, 0.22f, 0.85f);
     static readonly Color BarDark    = new Color(0.02f, 0.06f, 0.18f, 0.90f);
@@ -102,11 +102,10 @@ public class MainMenuBuilder : EditorWindow
         BuildTitle(root);
 
         // --- KANAN ATAS: MAIL & EVENTS ---
-        var TR = new Vector2(1f, 1f);
-        var btnMail = MakeSmallTopButton(root, "BtnMail", "MAIL", new Vector2(-margin.x - 60, -30));
-        var btnEvents = MakeSmallTopButton(root, "BtnEvents", "EVENTS", new Vector2(-margin.x - 60, -100));
+        var btnMail = MakeTopButton(root, "BtnMail", "MAIL", new Vector2(-margin.x - 10, -30));
+        var btnEvents = MakeTopButton(root, "BtnEvents", "EVENTS", new Vector2(-margin.x - 90, -30));
 
-        // --- BAR BAWAH & TOMBOL NAVIGASI UTAMA ---
+        // --- BAR BAWAH ---
         var bar = NewImage("BottomBar", root, null, BarDark);
         bar.raycastTarget = false;
         var br = bar.rectTransform;
@@ -114,7 +113,7 @@ public class MainMenuBuilder : EditorWindow
         br.anchorMax = new Vector2(1, 0);
         br.pivot = new Vector2(0.5f, 0);
         br.anchoredPosition = Vector2.zero;
-        br.sizeDelta = new Vector2(0, 130);
+        br.sizeDelta = new Vector2(0, 120);
 
         var topLine = NewImage("BarLine", bar.transform, null, NeonBlue);
         topLine.raycastTarget = false;
@@ -122,35 +121,36 @@ public class MainMenuBuilder : EditorWindow
         topLine.rectTransform.anchorMax = new Vector2(1, 1);
         topLine.rectTransform.sizeDelta = new Vector2(0, 3);
 
-        // Tombol Bawah Kiri (Shop, Settings, Quit)
+        // --- TOMBOL BAWAH KIRI (Shop, Settings, Quit) ---
         var BL = new Vector2(0f, 0f);
-        Vector2 navSize = new Vector2(220, 65);
+        Vector2 navSize = new Vector2(190, 60);
         float navGap = 15f;
-        float navY = margin.y + 15;
+        float navY = margin.y + 20;
 
-        var shop = MakeButton(root, "BtnShop", "SHOP", BL, BL, new Vector2(margin.x, navY), navSize, false);
-        var settings = MakeButton(root, "BtnSettings", "SETTINGS", BL, BL, new Vector2(margin.x + (navSize.x + navGap), navY), navSize, false);
-        var quit = MakeButton(root, "BtnQuit", "QUIT", BL, BL, new Vector2(margin.x + (navSize.x + navGap) * 2, navY), navSize, false);
+        var shop = MakeButton(root, "BtnShop", "SHOP", BL, BL, new Vector2(margin.x, navY), navSize);
+        var settings = MakeButton(root, "BtnSettings", "SETTINGS", BL, BL, new Vector2(margin.x + (navSize.x + navGap), navY), navSize);
+        var quit = MakeButton(root, "BtnQuit", "QUIT", BL, BL, new Vector2(margin.x + (navSize.x + navGap) * 2, navY), navSize);
 
-        // Tombol Bawah Tengah (CHARACTER, INVENTORY)
-        Vector2 midSize = new Vector2(240, 75);
-        var btnChar = MakeButton(root, "BtnCharacter", "CHARACTER", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-130, navY - 5), midSize, false);
-        var btnInv = MakeButton(root, "BtnInventory", "INVENTORY", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(130, navY - 5), midSize, false);
+        // --- TOMBOL BAWAH TENGAH (Character, Inventory) ---
+        Vector2 midSize = new Vector2(220, 70);
+        var btnChar = MakeButton(root, "BtnCharacter", "CHARACTER", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-120, navY - 5), midSize);
+        var btnInv = MakeButton(root, "BtnInventory", "INVENTORY", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(120, navY - 5), midSize);
 
-        // Tombol START (Kanan Bawah)
+        // --- TOMBOL START (Kanan Bawah, Border Tebal) ---
         var BR = new Vector2(1f, 0f);
-        Vector2 startSize = new Vector2(400, 100);
-        var start = MakeButton(root, "BtnStart", "START", BR, BR, new Vector2(-margin.x, navY - 10), startSize, true);
+        Vector2 startSize = new Vector2(380, 100);
+        // Margin X dibuat agak jauh dari pinggir kanan agar tidak mepet
+        var start = MakeStartButton(root, "BtnStart", "START", new Vector2(-margin.x, navY - 10), startSize);
 
         // --- PANEL POP-UP ---
         var shopPanel = MakePanel(root, "ShopPanel", "SHOP");
         var settingsPanel = MakePanel(root, "SettingsPanel", "SETTINGS");
         
-        // Setup Slider di Settings
         var setWin = settingsPanel.transform.Find("Window");
         var volLabel = NewText("VolumeLabel", setWin, "VOLUME", 38);
         volLabel.alignment = TextAlignmentOptions.Left;
         Place(volLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-300, 30), new Vector2(300, 60));
+        
         var slider = MakeSlider(setWin, new Vector2(80, 30), new Vector2(420, 40));
         slider.value = 1f;
         UnityEventTools.AddPersistentListener(slider.onValueChanged, lobbyUI.SetVolume);
@@ -174,7 +174,6 @@ public class MainMenuBuilder : EditorWindow
         shopPanel.SetActive(false);
         settingsPanel.SetActive(false);
 
-        // Versi
         var ver = NewText("Version", root, version, 22);
         ver.alignment = TextAlignmentOptions.Right;
         ver.color = new Color(1f, 1f, 1f, 0.7f);
@@ -188,8 +187,8 @@ public class MainMenuBuilder : EditorWindow
         Selection.activeGameObject = canvasGO;
     }
 
-    // --- TOMBOL KECIL KANAN ATAS (Mail/Events) ---
-    Button MakeSmallTopButton(Transform root, string name, string label, Vector2 pos)
+    // --- TOMBOL KANAN ATAS (Mail/Events) ---
+    Button MakeTopButton(Transform root, string name, string label, Vector2 pos)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(Image));
         go.transform.SetParent(root, false);
@@ -198,7 +197,7 @@ public class MainMenuBuilder : EditorWindow
         var bg = go.GetComponent<Image>();
         bg.sprite = slantSprite;
         bg.type = Image.Type.Sliced;
-        bg.color = PanelDark;
+        bg.color = BrightBlue;
 
         var border = NewImage("Outline", go.transform, slantOutline, Color.white);
         border.type = Image.Type.Sliced;
@@ -206,6 +205,65 @@ public class MainMenuBuilder : EditorWindow
 
         var txt = NewText("Label", go.transform, label, 20);
         txt.fontStyle = FontStyles.Bold;
+        Stretch(txt.rectTransform);
+
+        var btn = go.AddComponent<Button>();
+        btn.targetGraphic = bg;
+        return btn;
+    }
+
+    // --- TOMBOL START KHUSUS (Border Lebih Tebal) ---
+    Button MakeStartButton(Transform root, string name, string label, Vector2 pos, Vector2 size)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(root, false);
+        Place(go.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(1f, 0f), pos, size);
+
+        var bg = go.GetComponent<Image>();
+        bg.sprite = slantSprite;
+        bg.type = Image.Type.Sliced;
+        bg.color = BrightBlue; // Warna Biru Terang
+
+        var shadow = go.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0f, 0.3f, 0.8f, 0.6f);
+        shadow.effectDistance = new Vector2(0, -6);
+
+        // BORDER TEBAL (Ketebalan digandakan)
+        var border = NewImage("Outline", go.transform, slantOutline, Color.white);
+        border.type = Image.Type.Sliced;
+        border.rectTransform.offsetMin = new Vector2(-6, -6); // Tarik keluar
+        border.rectTransform.offsetMax = new Vector2(6, 6);
+        Stretch(border.rectTransform);
+
+        var txt = NewText("Label", go.transform, label, 52);
+        txt.fontStyle = FontStyles.Bold | FontStyles.Italic;
+        txt.characterSpacing = 8;
+        Stretch(txt.rectTransform);
+
+        var btn = go.AddComponent<Button>();
+        btn.targetGraphic = bg;
+        return btn;
+    }
+
+    // --- TOMBOL NAVIGASI BAWAH (Biru Terang) ---
+    Button MakeButton(Transform parent, string name, string label, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(parent, false);
+        Place(go.GetComponent<RectTransform>(), anchor, pivot, pos, size);
+
+        var bg = go.GetComponent<Image>();
+        bg.sprite = slantSprite;
+        bg.type = Image.Type.Sliced;
+        bg.color = BrightBlue; // Semua tombol biru terang
+
+        var border = NewImage("Outline", go.transform, slantOutline, Color.white);
+        border.type = Image.Type.Sliced;
+        Stretch(border.rectTransform);
+
+        var txt = NewText("Label", go.transform, label, 26);
+        txt.fontStyle = FontStyles.Bold | FontStyles.Italic;
+        txt.characterSpacing = 4;
         Stretch(txt.rectTransform);
 
         var btn = go.AddComponent<Button>();
@@ -250,36 +308,6 @@ public class MainMenuBuilder : EditorWindow
         Place(t.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -30), new Vector2(900, 110));
     }
 
-    // --- TOMBOL UTAMA ---
-    Button MakeButton(Transform parent, string name, string label, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size, bool isPrimary)
-    {
-        var go = new GameObject(name, typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(parent, false);
-        Place(go.GetComponent<RectTransform>(), anchor, pivot, pos, size);
-
-        var bg = go.GetComponent<Image>();
-        bg.sprite = slantSprite;
-        bg.type = Image.Type.Sliced;
-        bg.color = isPrimary ? BrightBlue : PanelDark;
-
-        var shadow = go.AddComponent<Shadow>();
-        shadow.effectColor = new Color(0f, 0.1f, 0.3f, 0.5f);
-        shadow.effectDistance = new Vector2(0, -5);
-
-        var border = NewImage("Outline", go.transform, slantOutline, Color.white);
-        border.type = Image.Type.Sliced;
-        Stretch(border.rectTransform);
-
-        var txt = NewText("Label", go.transform, label, isPrimary ? 46 : 26);
-        txt.fontStyle = FontStyles.Bold | FontStyles.Italic;
-        txt.characterSpacing = 4;
-        Stretch(txt.rectTransform);
-
-        var btn = go.AddComponent<Button>();
-        btn.targetGraphic = bg;
-        return btn;
-    }
-
     // --- PANEL POP-UP ---
     GameObject MakePanel(Transform root, string name, string title)
     {
@@ -300,7 +328,7 @@ public class MainMenuBuilder : EditorWindow
         Place(t.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -30), new Vector2(700, 80));
 
         var close = MakeButton(win.transform, "BtnClose", "CLOSE", new Vector2(0.5f, 0), new Vector2(0.5f, 0),
-            new Vector2(0, 36), new Vector2(300, 76), false);
+            new Vector2(0, 36), new Vector2(300, 76));
         UnityEventTools.AddBoolPersistentListener(close.onClick, overlay.gameObject.SetActive, false);
         return overlay.gameObject;
     }
