@@ -7,21 +7,20 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
 
-// Lobby: gambar key art (karakter + logo) sebagai background,
-// tombol QUIT dan START di kanan bawah, warna putih-biru.
 public class MainMenuBuilder : EditorWindow
 {
-    Sprite background;
+    Sprite background, character;
     TMP_FontAsset customFont;
     string gameScene = "GameScene";
     string version   = "v1.0.0";
-    Vector2 margin   = new Vector2(70, 55);   // jarak tombol dari tepi kanan / bawah
+    Vector2 margin   = new Vector2(70, 55);
     Vector2 scrollPos;
 
-    static readonly Color Blue      = new Color(0.10f, 0.38f, 0.98f);
-    static readonly Color BlueLight = new Color(0.30f, 0.62f, 1f);
-    static readonly Color BlueDark  = new Color(0.04f, 0.16f, 0.62f);
-    static readonly Color Navy      = new Color(0.03f, 0.10f, 0.40f);
+    // --- PALET WARNA (SESUAI GAMBAR REFERENSI KEDUA) ---
+    static readonly Color BrightBlue = new Color(0.1f, 0.45f, 1f);    // Biru tombol START
+    static readonly Color NeonBlue   = new Color(0.2f, 0.8f, 1f);     // Biru aksen / border
+    static readonly Color WhiteSolid = new Color(0.95f, 0.98f, 1f);   // Putih kebiruan
+    static readonly Color DarkBlue   = new Color(0.05f, 0.15f, 0.35f); // Teks biru gelap
 
     Sprite slantSprite, slantOutline;
 
@@ -36,8 +35,9 @@ public class MainMenuBuilder : EditorWindow
 
         scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
         GUILayout.Label("Aset", EditorStyles.boldLabel);
-        background = (Sprite)EditorGUILayout.ObjectField("Background (key art)", background, typeof(Sprite), false);
-        customFont = (TMP_FontAsset)EditorGUILayout.ObjectField("Font TMP (opsional)", customFont, typeof(TMP_FontAsset), false);
+        background = (Sprite)EditorGUILayout.ObjectField("Background (Latar)", background, typeof(Sprite), false);
+        character  = (Sprite)EditorGUILayout.ObjectField("Karakter (Tengah)", character, typeof(Sprite), false);
+        customFont = (TMP_FontAsset)EditorGUILayout.ObjectField("Font TMP (Opsional)", customFont, typeof(TMP_FontAsset), false);
 
         GUILayout.Space(6);
         GUILayout.Label("Pengaturan", EditorStyles.boldLabel);
@@ -66,31 +66,44 @@ public class MainMenuBuilder : EditorWindow
         scaler.matchWidthOrHeight = 0.5f;
         Transform root = canvasGO.transform;
 
-        // EventSystem (input lama / Standalone)
+        // EventSystem (Standalone Input Module)
         if (Object.FindAnyObjectByType<EventSystem>() == null)
         {
             var eventSystemGO = new GameObject("EventSystem", typeof(EventSystem));
             eventSystemGO.AddComponent<StandaloneInputModule>();
         }
 
-        // Background: key art karakter + logo (sudah termasuk judul game)
-        var bg = NewImage("Background", root, background, new Color(0.95f, 0.97f, 1f));
+        // Background
+        var bg = NewImage("Background", root, background, Color.white);
         bg.raycastTarget = false;
         Place(bg.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(100, 100));
         bg.gameObject.AddComponent<AutoFitBackground>();
         bg.gameObject.AddComponent<BackgroundAnimator>();
 
+        // Karakter Utama (Di tengah)
+        var chr = NewImage("Karakter", root, character, Color.white);
+        chr.preserveAspect = true;
+        chr.raycastTarget = false;
+        chr.enabled = character != null;
+        var cr = chr.rectTransform;
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0.5f, 0f);
+        cr.anchoredPosition = Vector2.zero;
+        cr.sizeDelta = new Vector2(1000, 1080);
+
         // Manager
         var menu = new GameObject("MenuManager").AddComponent<MainMenu>();
 
-        // ---------- Tombol kanan bawah: QUIT (kiri) dan START (kanan, lebih besar) ----------
+        // --- TOMBOL KANAN BAWAH (QUIT & START) ---
         var BRc = new Vector2(1f, 0f);
         Vector2 startSize = new Vector2(540, 112);
         Vector2 quitSize  = new Vector2(340, 84);
         float gap = 26f;
 
+        // START: Tombol Biru Solid
         var start = MakeButton(root, "BtnStart", "START", BRc,
                                new Vector2(-margin.x, margin.y), startSize, true);
+        
+        // QUIT: Tombol Putih Solid
         var quit  = MakeButton(root, "BtnQuit", "QUIT", BRc,
                                new Vector2(-(margin.x + startSize.x + gap), margin.y + (startSize.y - quitSize.y) * 0.5f),
                                quitSize, false);
@@ -101,10 +114,10 @@ public class MainMenuBuilder : EditorWindow
         AddAnimation(quit.gameObject, 0.1f);
         AddAnimation(start.gameObject, 0.2f);
 
-        // Versi (kiri bawah)
+        // Teks Versi (Kiri bawah)
         var ver = NewText("Version", root, version, 22);
         ver.alignment = TextAlignmentOptions.Left;
-        ver.color = new Color(Navy.r, Navy.g, Navy.b, 0.7f);
+        ver.color = new Color(1f, 1f, 1f, 0.7f); // Putih transparan
         Place(ver.rectTransform, Vector2.zero, Vector2.zero, new Vector2(40, 30), new Vector2(300, 34));
 
         var so = new SerializedObject(menu);
@@ -115,75 +128,80 @@ public class MainMenuBuilder : EditorWindow
         Selection.activeGameObject = canvasGO;
     }
 
-    // ---------- Tombol putih-biru: jajar genjang + garis neon + panah ----------
+    // --- FUNGSI PEMBUAT TOMBOL (PUTIH & BIRU) ---
     Button MakeButton(Transform parent, string name, string label, Vector2 anchor,
-                      Vector2 pos, Vector2 size, bool primary)
+                      Vector2 pos, Vector2 size, bool isPrimary)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(Image));
         go.transform.SetParent(parent, false);
         Place(go.GetComponent<RectTransform>(), anchor, anchor, pos, size);
 
+        // Latar Belakang (Biru untuk Primary, Putih untuk Sekunder)
         var bg = go.GetComponent<Image>();
         bg.sprite = slantSprite;
         bg.type = Image.Type.Sliced;
-        bg.color = Color.white; // warna diatur lewat Button.colors
+        bg.color = isPrimary ? BrightBlue : WhiteSolid;
 
-        // Bayangan biru lembut supaya tombol terangkat dari background putih
+        // Bayangan tipis
         var shadow = go.AddComponent<Shadow>();
-        shadow.effectColor = new Color(0.02f, 0.12f, 0.5f, 0.35f);
-        shadow.effectDistance = new Vector2(0, -7);
+        shadow.effectColor = new Color(0f, 0.1f, 0.3f, 0.4f);
+        shadow.effectDistance = new Vector2(0, -5);
 
-        Color accent = primary ? Color.white : Blue;
-        Color textColor = primary ? Color.white : BlueDark;
-
-        var border = NewImage("Outline", go.transform, slantOutline, primary ? BlueLight : Blue);
+        // Garis Tepi
+        var borderColor = isPrimary ? NeonBlue : new Color(0.8f, 0.9f, 1f);
+        var border = NewImage("Outline", go.transform, slantOutline, borderColor);
         border.type = Image.Type.Sliced;
         border.raycastTarget = false;
         Stretch(border.rectTransform);
 
-        // Garis aksen miring di kiri
-        var bar = NewImage("Accent", go.transform, null, accent);
+        // Garis Aksen Miring di Kiri
+        var bar = NewImage("Accent", go.transform, null, isPrimary ? Color.white : BrightBlue);
         bar.raycastTarget = false;
         Place(bar.rectTransform, new Vector2(0, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(40, 0),
-              new Vector2(primary ? 8 : 6, size.y * 0.5f));
+              new Vector2(isPrimary ? 8 : 6, size.y * 0.5f));
         bar.rectTransform.localRotation = Quaternion.Euler(0, 0, -17);
 
-        var txt = NewText("Label", go.transform, label, primary ? 52 : 36);
+        // Teks (Putih untuk Primary, Biru untuk Sekunder)
+        var txt = NewText("Label", go.transform, label, isPrimary ? 52 : 36);
         txt.fontStyle = FontStyles.Bold | FontStyles.Italic;
-        txt.characterSpacing = primary ? 10 : 8;
-        txt.color = textColor;
+        txt.characterSpacing = isPrimary ? 10 : 8;
+        txt.color = isPrimary ? Color.white : DarkBlue;
         txt.alignment = TextAlignmentOptions.Center;
         Stretch(txt.rectTransform);
 
-        var arrow = NewText("Arrow", go.transform, "»", primary ? 56 : 40);
-        arrow.color = primary ? Color.white : Blue;
+        // Panah Kanan
+        var arrow = NewText("Arrow", go.transform, "»", isPrimary ? 56 : 40);
+        arrow.color = isPrimary ? Color.white : BrightBlue;
         arrow.fontStyle = FontStyles.Bold;
         Place(arrow.rectTransform, new Vector2(1, 0.5f), new Vector2(1, 0.5f), new Vector2(-48, 2), new Vector2(44, 60));
 
+        // Logika Tombol
         var btn = go.AddComponent<Button>();
         btn.targetGraphic = bg;
         btn.transition = Selectable.Transition.ColorTint;
         var c = btn.colors;
-        if (primary)
+        
+        if (isPrimary)
         {
-            c.normalColor      = Blue;
-            c.highlightedColor = BlueLight;
-            c.pressedColor     = BlueDark;
-            c.selectedColor    = Blue;
+            c.normalColor      = Color.white;
+            c.highlightedColor = new Color(0.6f, 0.8f, 1f); // Sedikit lebih terang
+            c.pressedColor     = new Color(0.4f, 0.6f, 0.8f);
+            c.selectedColor    = Color.white;
         }
         else
         {
-            c.normalColor      = new Color(1f, 1f, 1f, 0.92f);
-            c.highlightedColor = new Color(0.85f, 0.93f, 1f, 1f);
-            c.pressedColor     = new Color(0.68f, 0.82f, 1f, 1f);
-            c.selectedColor    = new Color(1f, 1f, 1f, 0.92f);
+            c.normalColor      = Color.white;
+            c.highlightedColor = new Color(0.85f, 0.93f, 1f); // Sedikit kebiruan
+            c.pressedColor     = new Color(0.7f, 0.85f, 1f);
+            c.selectedColor    = Color.white;
         }
         c.fadeDuration = 0.1f;
         btn.colors = c;
+
         return btn;
     }
 
-    // ---------- Pembuat sprite ----------
+    // --- PEMBUAT SPRITE (Bentuk Jajar Genjang) ---
     delegate bool InsideFn(float x, float y, float w, float h);
 
     void CreateSprites()
@@ -232,7 +250,7 @@ public class MainMenuBuilder : EditorWindow
         return AssetDatabase.LoadAssetAtPath<Sprite>(path);
     }
 
-    // ---------- Helper ----------
+    // --- HELPER ---
     void Place(RectTransform r, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size)
     {
         r.anchorMin = r.anchorMax = anchor;
