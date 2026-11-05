@@ -13,19 +13,26 @@ public class MainMenuBuilder : EditorWindow
     Sprite character;
     TMP_FontAsset customFont;
     string gameScene  = "GameScene";
-    string version    = "v1.0.0";
     string playerName = "PLAYER";
-    Vector2 margin    = new Vector2(70, 40);
-    float startRaise  = 45f; // makin besar = tombol START makin naik
+    string agentTag   = "AGENT 001";
+    string rankText   = "ROOKIE 1";
+    string version    = "v1.0.0  |  REGION: ID";
+    float bottomY     = 60f;  // jarak baris tombol dari bawah layar
+    float startRaise  = 0f;   // naikkan tombol START saja (0 = sejajar)
     Vector2 scrollPos;
 
-    // --- PALET WARNA CYBER ---
-    static readonly Color BrightBlue = new Color(0.1f, 0.45f, 1f);
-    static readonly Color NeonBlue   = new Color(0.2f, 0.85f, 1f);
-    static readonly Color PanelDark  = new Color(0.02f, 0.08f, 0.22f, 0.82f);
-    static readonly Color BarDark    = new Color(0.02f, 0.06f, 0.18f, 0.80f);
+    // --- PALET: MERAH + NAVY (tema tactical) ---
+    static readonly Color Red        = new Color(0.87f, 0.18f, 0.26f);
+    static readonly Color RedLine    = new Color(0.78f, 0.22f, 0.32f, 1f);
+    static readonly Color RedDim     = new Color(0.55f, 0.17f, 0.25f, 1f);
+    static readonly Color Navy       = new Color(0.07f, 0.10f, 0.22f, 0.93f);
+    static readonly Color NavyDark   = new Color(0.04f, 0.06f, 0.15f, 0.92f);
+    static readonly Color AccentBlue = new Color(0.45f, 0.62f, 1f);
+    static readonly Color Gray       = new Color(0.62f, 0.67f, 0.78f);
+    static readonly Color FrameCol   = new Color(0.78f, 0.2f, 0.3f, 0.5f);
+    static readonly Vector2 Ctr      = new Vector2(0.5f, 0.5f);
 
-    Sprite slantSprite, slantOutline;
+    Sprite chamfer, chamferOutline;
 
     [MenuItem("Tools/Bangun Main Menu")]
     static void Open() => GetWindow<MainMenuBuilder>("Lobby Builder");
@@ -45,8 +52,10 @@ public class MainMenuBuilder : EditorWindow
         GUILayout.Label("Pengaturan", EditorStyles.boldLabel);
         gameScene  = EditorGUILayout.TextField("Nama Scene Game", gameScene);
         playerName = EditorGUILayout.TextField("Nama Player", playerName);
+        agentTag   = EditorGUILayout.TextField("Tag (cth: AGENT 001)", agentTag);
+        rankText   = EditorGUILayout.TextField("Rank", rankText);
         version    = EditorGUILayout.TextField("Teks versi", version);
-        margin     = EditorGUILayout.Vector2Field("Jarak tepi (kiri/kanan, bawah)", margin);
+        bottomY    = EditorGUILayout.FloatField("Jarak tombol dari bawah", bottomY);
         startRaise = EditorGUILayout.FloatField("START naik ke atas", startRaise);
         EditorGUILayout.EndScrollView();
     }
@@ -84,8 +93,8 @@ public class MainMenuBuilder : EditorWindow
             chr.raycastTarget = false;
             var cr = chr.rectTransform;
             cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0.5f, 0f);
-            cr.anchoredPosition = new Vector2(0, 110);
-            cr.sizeDelta = new Vector2(1000, 970);
+            cr.anchoredPosition = new Vector2(0, 180);
+            cr.sizeDelta = new Vector2(1000, 800);
         }
 
         // Manager
@@ -93,80 +102,67 @@ public class MainMenuBuilder : EditorWindow
         var menu = menuGO.AddComponent<MainMenu>();
         var lobbyUI = menuGO.AddComponent<LobbyUI>();
 
-        BuildTopLeftProfile(root);
+        // Garis bingkai atas & bawah
+        FrameLine(root, true, 238f);
+        FrameLine(root, false, 178f);
 
-        // --- BAR BAWAH ---
-        var bar = NewImage("BottomBar", root, null, BarDark);
-        bar.raycastTarget = false;
-        var br = bar.rectTransform;
-        br.anchorMin = new Vector2(0, 0);
-        br.anchorMax = new Vector2(1, 0);
-        br.pivot = new Vector2(0.5f, 0);
-        br.anchoredPosition = Vector2.zero;
-        br.sizeDelta = new Vector2(0, 110);
+        // Profil (kiri atas, bisa diklik)
+        var profileBtn = BuildProfile(root);
 
-        var topLine = NewImage("BarLine", bar.transform, null, NeonBlue);
-        topLine.raycastTarget = false;
-        Place(topLine.rectTransform, new Vector2(0, 1), new Vector2(0.5f, 1), Vector2.zero, Vector2.zero);
-        topLine.rectTransform.anchorMax = new Vector2(1, 1);
-        topLine.rectTransform.sizeDelta = new Vector2(0, 3);
+        // Status bar (kanan atas): SIGNAL, GOLD, MAIL, EVENTS
+        Button mail, events;
+        BuildStatusBar(root, lobbyUI, out mail, out events);
 
-        // --- TOMBOL NAVIGASI (kiri bawah): SHOP, SETTINGS, QUIT ---
-        var BL = new Vector2(0f, 0f);
-        Vector2 navSize = new Vector2(300, 76);
-        float navGap = 6f;
-        float navY = margin.y - 4;
+        // --- BARIS TOMBOL BAWAH (tengah) ---
+        string[] names  = { "BtnShop", "BtnSettings", "BtnQuit", "BtnCharacter", "BtnInventory", "BtnStart" };
+        string[] labels = { "SHOP", "SETTINGS", "QUIT", "CHARACTER", "INVENTORY", "START" };
+        float w = 240f, h = 66f, gap = 20f;
+        float total = labels.Length * w + (labels.Length - 1) * gap;
+        var BC = new Vector2(0.5f, 0f);
+        var row = new Button[labels.Length];
+        for (int i = 0; i < row.Length; i++)
+        {
+            bool isStart = (i == row.Length - 1);
+            float x = -total * 0.5f + w * 0.5f + i * (w + gap);
+            float y = bottomY + (isStart ? startRaise : 0f);
+            row[i] = MakeButton(root, names[i], labels[i], BC, BC, new Vector2(x, y),
+                                new Vector2(w, h), isStart, 30);
+        }
+        var shop = row[0]; var settings = row[1]; var quit = row[2];
+        var characters = row[3]; var inventory = row[4]; var start = row[5];
 
-        var shop = MakeButton(root, "BtnShop", "SHOP", BL, BL,
-            new Vector2(margin.x, navY), navSize, false);
-        var settings = MakeButton(root, "BtnSettings", "SETTINGS", BL, BL,
-            new Vector2(margin.x + (navSize.x + navGap), navY), navSize, false);
-        var quit = MakeButton(root, "BtnQuit", "QUIT", BL, BL,
-            new Vector2(margin.x + (navSize.x + navGap) * 2, navY), navSize, false);
-
-        // --- START (kanan bawah, besar) ---
-        var BR = new Vector2(1f, 0f);
-        Vector2 startSize = new Vector2(600, 128);
-        var start = MakeButton(root, "BtnStart", "START", BR, BR,
-            new Vector2(-margin.x, margin.y + startRaise), startSize, true);
+        // Versi (kiri bawah)
+        var ver = NewText("Version", root, version, 22);
+        ver.alignment = TextAlignmentOptions.Left;
+        ver.color = new Color(Gray.r, Gray.g, Gray.b, 0.85f);
+        Place(ver.rectTransform, Vector2.zero, Vector2.zero, new Vector2(46, 22), new Vector2(700, 30));
 
         // --- PANEL POP-UP ---
-        var shopPanel = MakePanel(root, "ShopPanel", "SHOP");
-        var shopWin = shopPanel.transform.Find("Window");
-        var shopInfo = NewText("Info", shopWin, "Toko segera hadir...", 40);
-        shopInfo.color = new Color(0.8f, 0.92f, 1f);
-        Place(shopInfo.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(700, 80));
-
-        var settingsPanel = MakePanel(root, "SettingsPanel", "SETTINGS");
-        var setWin = settingsPanel.transform.Find("Window");
-        var volLabel = NewText("VolumeLabel", setWin, "VOLUME", 38);
-        volLabel.fontStyle = FontStyles.Bold | FontStyles.Italic;
-        volLabel.alignment = TextAlignmentOptions.Left;
-        Place(volLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-300, 30), new Vector2(300, 60));
-        var slider = MakeSlider(setWin, new Vector2(80, 30), new Vector2(420, 40));
-        slider.value = 1f;
-        UnityEventTools.AddPersistentListener(slider.onValueChanged, lobbyUI.SetVolume);
+        var profilePanel    = BuildProfilePanel(root);
+        var charactersPanel = BuildCharactersPanel(root, lobbyUI);
+        var inventoryPanel  = BuildInventoryPanel(root);
+        var shopPanel       = BuildShopPanel(root);
+        var settingsPanel   = BuildSettingsPanel(root, lobbyUI);
+        var mailPanel       = BuildMailPanel(root, lobbyUI);
+        var eventsPanel     = BuildEventsPanel(root, lobbyUI);
 
         // Hubungkan tombol
         UnityEventTools.AddPersistentListener(start.onClick, menu.StartGame);
         UnityEventTools.AddPersistentListener(quit.onClick, menu.QuitGame);
+        UnityEventTools.AddBoolPersistentListener(profileBtn.onClick, profilePanel.SetActive, true);
+        UnityEventTools.AddBoolPersistentListener(characters.onClick, charactersPanel.SetActive, true);
+        UnityEventTools.AddBoolPersistentListener(inventory.onClick, inventoryPanel.SetActive, true);
         UnityEventTools.AddBoolPersistentListener(shop.onClick, shopPanel.SetActive, true);
         UnityEventTools.AddBoolPersistentListener(settings.onClick, settingsPanel.SetActive, true);
+        UnityEventTools.AddBoolPersistentListener(mail.onClick, mailPanel.SetActive, true);
+        UnityEventTools.AddBoolPersistentListener(events.onClick, eventsPanel.SetActive, true);
 
-        AddAnimation(shop.gameObject, 0.1f);
-        AddAnimation(settings.gameObject, 0.2f);
-        AddAnimation(quit.gameObject, 0.3f);
-        AddAnimation(start.gameObject, 0.4f);
+        for (int i = 0; i < row.Length; i++) AddAnimation(row[i].gameObject, 0.1f + i * 0.06f);
 
-        // Panel disembunyikan di awal
-        shopPanel.SetActive(false);
-        settingsPanel.SetActive(false);
+        foreach (var p in new[] { profilePanel, charactersPanel, inventoryPanel, shopPanel, settingsPanel, mailPanel, eventsPanel })
+            p.SetActive(false);
 
-        // Versi (kanan atas, kecil)
-        var ver = NewText("Version", root, version, 22);
-        ver.alignment = TextAlignmentOptions.Right;
-        ver.color = new Color(1f, 1f, 1f, 0.7f);
-        Place(ver.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-30, -20), new Vector2(300, 34));
+        EditorUtility.SetDirty(lobbyUI);
 
         var so = new SerializedObject(menu);
         so.FindProperty("gameSceneName").stringValue = gameScene;
@@ -176,127 +172,504 @@ public class MainMenuBuilder : EditorWindow
         Selection.activeGameObject = canvasGO;
     }
 
-    // --- PROFIL KIRI ATAS ---
-    void BuildTopLeftProfile(Transform root)
-    {
-        var box = NewImage("Profile", root, slantSprite, PanelDark);
-        box.type = Image.Type.Sliced;
-        box.raycastTarget = false;
-        Place(box.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(40, -30), new Vector2(460, 110));
+    // =========================== HUD UTAMA ===========================
 
-        var outline = NewImage("Outline", box.transform, slantOutline, Color.white);
+    // Garis tipis merah + ujung tegak di kiri & kanan
+    void FrameLine(Transform root, bool top, float offset)
+    {
+        float ay = top ? 1f : 0f;
+        float y = top ? -offset : offset;
+
+        var line = NewImage(top ? "FrameTop" : "FrameBottom", root, null, FrameCol);
+        line.raycastTarget = false;
+        var r = line.rectTransform;
+        r.anchorMin = new Vector2(0, ay);
+        r.anchorMax = new Vector2(1, ay);
+        r.pivot = Ctr;
+        r.anchoredPosition = new Vector2(0, y);
+        r.sizeDelta = new Vector2(-140, 2);
+
+        for (int i = 0; i < 2; i++)
+        {
+            var tick = NewImage("Tick", root, null, FrameCol);
+            tick.raycastTarget = false;
+            var a = new Vector2(i == 0 ? 0f : 1f, ay);
+            Place(tick.rectTransform, a, Ctr, new Vector2(i == 0 ? 70 : -70, y), new Vector2(2, 26));
+        }
+    }
+
+    // Kotak profil kiri atas (bisa diklik)
+    Button BuildProfile(Transform root)
+    {
+        var TL = new Vector2(0, 1);
+        var box = NewImage("Profile", root, chamfer, Navy);
+        box.type = Image.Type.Sliced;
+        box.raycastTarget = true;
+        Place(box.rectTransform, TL, TL, new Vector2(62, -55), new Vector2(440, 145));
+
+        var outline = NewImage("Outline", box.transform, chamferOutline, RedLine);
         outline.type = Image.Type.Sliced;
         outline.raycastTarget = false;
         Stretch(outline.rectTransform);
 
-        var avatar = NewImage("Avatar", box.transform, null, new Color(0.15f, 0.3f, 0.6f, 1f));
+        Bracket(box.transform, true);
+        Bracket(box.transform, false);
+
+        var avatar = NewImage("Avatar", box.transform, null, new Color(0.10f, 0.14f, 0.28f));
         avatar.raycastTarget = false;
-        Place(avatar.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(40, 0), new Vector2(74, 74));
+        Place(avatar.rectTransform, TL, TL, new Vector2(16, -16), new Vector2(92, 92));
+        RectOutline(avatar.transform, RedLine, 2f);
 
-        var name = NewText("Name", box.transform, playerName, 34);
-        name.fontStyle = FontStyles.Bold | FontStyles.Italic;
-        name.alignment = TextAlignmentOptions.Left;
-        Place(name.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(130, 18), new Vector2(300, 44));
+        var n = NewText("Name", box.transform, playerName + "  |  " + agentTag, 26);
+        n.fontStyle = FontStyles.Bold;
+        n.alignment = TextAlignmentOptions.Left;
+        n.enableWordWrapping = false;
+        Place(n.rectTransform, TL, new Vector2(0, 0.5f), new Vector2(128, -34), new Vector2(310, 34));
 
-        var lv = NewText("Level", box.transform, "Lv. 1", 26);
-        lv.alignment = TextAlignmentOptions.Left;
-        lv.color = NeonBlue;
-        Place(lv.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(130, -22), new Vector2(300, 34));
+        var rank = NewText("Rank", box.transform, rankText, 26);
+        rank.fontStyle = FontStyles.Bold;
+        rank.alignment = TextAlignmentOptions.Left;
+        rank.color = new Color(1f, 0.32f, 0.38f);
+        Place(rank.rectTransform, TL, new Vector2(0, 0.5f), new Vector2(128, -70), new Vector2(310, 32));
+
+        var peak = NewText("Peak", box.transform, "PEAK: " + rankText, 22);
+        peak.fontStyle = FontStyles.Bold;
+        peak.alignment = TextAlignmentOptions.Left;
+        peak.color = AccentBlue;
+        Place(peak.rectTransform, TL, new Vector2(0, 0.5f), new Vector2(128, -100), new Vector2(310, 30));
+
+        var badge = NewImage("LevelBadge", box.transform, null, NavyDark);
+        badge.raycastTarget = false;
+        Place(badge.rectTransform, Vector2.zero, Vector2.zero, new Vector2(16, 10), new Vector2(64, 24));
+        RectOutline(badge.transform, Gray, 1f);
+        var lv = NewText("Text", badge.transform, "LVL 1", 17);
+        lv.fontStyle = FontStyles.Bold;
+        Stretch(lv.rectTransform);
+
+        var btn = box.gameObject.AddComponent<Button>();
+        btn.targetGraphic = box;
+        btn.transition = Selectable.Transition.ColorTint;
+        var c = btn.colors;
+        c.normalColor = new Color(0.9f, 0.9f, 0.95f);
+        c.highlightedColor = Color.white;
+        c.pressedColor = new Color(0.65f, 0.65f, 0.7f);
+        c.selectedColor = c.normalColor;
+        c.fadeDuration = 0.1f;
+        btn.colors = c;
+        return btn;
     }
 
-    // --- TOMBOL CYBERPUNK: border putih ---
+    // Tanda kurung di sudut kotak (kiri-atas / kanan-atas)
+    void Bracket(Transform parent, bool left)
+    {
+        var col = new Color(0.85f, 0.88f, 0.95f, 0.8f);
+        var a = left ? new Vector2(0, 1) : new Vector2(1, 1);
+        float sx = left ? -8f : 8f;
+
+        var hz = NewImage("BracketH", parent, null, col);
+        hz.raycastTarget = false;
+        Place(hz.rectTransform, a, a, new Vector2(sx, 8), new Vector2(30, 2));
+
+        var vt = NewImage("BracketV", parent, null, col);
+        vt.raycastTarget = false;
+        Place(vt.rectTransform, a, a, new Vector2(sx, 8), new Vector2(2, 30));
+    }
+
+    // Status kanan atas: SIGNAL, GOLD, MAIL, EVENTS
+    void BuildStatusBar(Transform root, LobbyUI lobbyUI, out Button mail, out Button events)
+    {
+        var TR = new Vector2(1, 1);
+        float y = -55f, h = 46f;
+
+        events = MakeFlatButton(root, "BtnEvents", "EVENTS", TR, TR, new Vector2(-66, y), new Vector2(120, h), 22);
+        mail   = MakeFlatButton(root, "BtnMail", "MAIL", TR, TR, new Vector2(-194, y), new Vector2(100, h), 22);
+
+        // GOLD
+        var goldBox = FlatBox(root, "GoldBox", TR, new Vector2(-302, y), new Vector2(190, h));
+        var coin = NewImage("Coin", goldBox.transform, null, new Color(1f, 0.78f, 0.2f));
+        coin.raycastTarget = false;
+        Place(coin.rectTransform, new Vector2(0, 0.5f), Ctr, new Vector2(24, 0), new Vector2(16, 16));
+        coin.rectTransform.localRotation = Quaternion.Euler(0, 0, 45);
+
+        var gl = NewText("GoldLabel", goldBox.transform, "GOLD", 19);
+        gl.fontStyle = FontStyles.Bold;
+        gl.alignment = TextAlignmentOptions.Left;
+        gl.color = Gray;
+        Place(gl.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(42, 0), new Vector2(70, 30));
+
+        var gv = NewText("GoldValue", goldBox.transform, "0", 26);
+        gv.fontStyle = FontStyles.Bold;
+        gv.alignment = TextAlignmentOptions.Right;
+        Place(gv.rectTransform, new Vector2(1, 0.5f), new Vector2(1, 0.5f), new Vector2(-14, 0), new Vector2(100, 34));
+        lobbyUI.goldText = gv;
+
+        // SIGNAL (hiasan)
+        var sig = FlatBox(root, "SignalBox", TR, new Vector2(-500, y), new Vector2(184, h));
+        for (int k = 0; k < 4; k++)
+        {
+            var bar = NewImage("Bar" + k, sig.transform, null, new Color(0.75f, 0.8f, 0.9f));
+            bar.raycastTarget = false;
+            Place(bar.rectTransform, Vector2.zero, Vector2.zero, new Vector2(16 + 9 * k, 12), new Vector2(6, 6 + 4 * k));
+        }
+        var st = NewText("SignalText", sig.transform, "ONLINE", 19);
+        st.fontStyle = FontStyles.Bold;
+        st.alignment = TextAlignmentOptions.Left;
+        st.color = Gray;
+        Place(st.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(60, 0), new Vector2(110, 30));
+    }
+
+    // =========================== PANEL-PANEL ===========================
+
+    GameObject BuildProfilePanel(Transform root)
+    {
+        var panel = MakePanel(root, "ProfilePanel", "PROFILE");
+        var win = panel.transform.Find("Window");
+
+        Label(win, playerName + "   |   " + agentTag, 30, new Vector2(0, 165), new Vector2(700, 44),
+              TextAlignmentOptions.Center, AccentBlue, true);
+
+        string[] names  = { "LEVEL", "HP", "MP", "ATK", "DEF", "SPD" };
+        string[] values = { "1", "100 / 100", "100 / 100", "10", "5", "5" };
+        for (int i = 0; i < names.Length; i++)
+        {
+            float x = (i % 2 == 0) ? -205 : 205;
+            float y = 100 - (i / 2) * 76;
+            var r = Box(win, "Stat_" + names[i], new Vector2(x, y), new Vector2(380, 60), NavyDark);
+            Label(r.transform, names[i], 28, new Vector2(-90, 0), new Vector2(160, 40),
+                  TextAlignmentOptions.Left, Color.white, true);
+            Label(r.transform, values[i], 28, new Vector2(90, 0), new Vector2(170, 40),
+                  TextAlignmentOptions.Right, new Color(1f, 0.4f, 0.45f), true);
+        }
+        return panel;
+    }
+
+    GameObject BuildCharactersPanel(Transform root, LobbyUI lobbyUI)
+    {
+        var panel = MakePanel(root, "CharactersPanel", "CHARACTER");
+        var win = panel.transform.Find("Window");
+
+        string[] names = { "ARION", "LUNA", "KAI", "ZERO" };
+        Color[] tints = {
+            new Color(0.2f, 0.5f, 0.95f), new Color(0.6f, 0.35f, 0.9f),
+            new Color(0.15f, 0.7f, 0.65f), new Color(0.85f, 0.4f, 0.5f)
+        };
+        float w = 190f, gap = 14f;
+        float total = w * names.Length + gap * (names.Length - 1);
+        var cards = new Image[names.Length];
+
+        for (int i = 0; i < names.Length; i++)
+        {
+            float x = -total * 0.5f + w * 0.5f + i * (w + gap);
+            var card = Box(win, "Card_" + names[i], new Vector2(x, 25), new Vector2(w, 260), Navy);
+            card.raycastTarget = true;
+
+            var b = card.gameObject.AddComponent<Button>();
+            b.targetGraphic = card;
+            b.transition = Selectable.Transition.ColorTint;
+            var c = b.colors;
+            c.normalColor = new Color(0.9f, 0.9f, 0.95f);
+            c.highlightedColor = Color.white;
+            c.pressedColor = new Color(0.65f, 0.65f, 0.7f);
+            c.selectedColor = c.normalColor;
+            c.fadeDuration = 0.1f;
+            b.colors = c;
+
+            Box(card.transform, "Portrait", new Vector2(0, 35), new Vector2(150, 140), tints[i]);
+            Label(card.transform, names[i], 30, new Vector2(0, -75), new Vector2(170, 40),
+                  TextAlignmentOptions.Center, Color.white, true);
+            Label(card.transform, "Lv. 1", 22, new Vector2(0, -105), new Vector2(170, 30),
+                  TextAlignmentOptions.Center, AccentBlue);
+
+            UnityEventTools.AddIntPersistentListener(b.onClick, lobbyUI.SelectCharacter, i);
+            cards[i] = card;
+        }
+        lobbyUI.characterCards = cards;
+        return panel;
+    }
+
+    GameObject BuildInventoryPanel(Transform root)
+    {
+        var panel = MakePanel(root, "InventoryPanel", "INVENTORY");
+        var win = panel.transform.Find("Window");
+
+        Label(win, "0 / 18", 26, new Vector2(330, 222), new Vector2(160, 36),
+              TextAlignmentOptions.Right, AccentBlue, true);
+
+        int cols = 6, rows = 3;
+        float s = 100f, g = 12f;
+        for (int r = 0; r < rows; r++)
+            for (int c = 0; c < cols; c++)
+            {
+                float x = -(cols - 1) * (s + g) * 0.5f + c * (s + g);
+                float y = 122 - r * (s + g);
+                Box(win, "Slot_" + (r * cols + c), new Vector2(x, y), new Vector2(s, s), NavyDark);
+            }
+        return panel;
+    }
+
+    GameObject BuildShopPanel(Transform root)
+    {
+        var panel = MakePanel(root, "ShopPanel", "SHOP");
+        var win = panel.transform.Find("Window");
+        Label(win, "Toko segera hadir...", 40, Vector2.zero, new Vector2(700, 80),
+              TextAlignmentOptions.Center, Gray);
+        return panel;
+    }
+
+    GameObject BuildSettingsPanel(Transform root, LobbyUI lobbyUI)
+    {
+        var panel = MakePanel(root, "SettingsPanel", "SETTINGS");
+        var win = panel.transform.Find("Window");
+
+        Label(win, "VOLUME", 38, new Vector2(-300, 140), new Vector2(300, 60),
+              TextAlignmentOptions.Left, Color.white, true);
+        var slider = MakeSlider(win, new Vector2(80, 140), new Vector2(420, 40));
+        slider.value = 1f;
+        UnityEventTools.AddPersistentListener(slider.onValueChanged, lobbyUI.SetVolume);
+
+        Label(win, "GRAPHICS", 38, new Vector2(-300, 30), new Vector2(300, 60),
+              TextAlignmentOptions.Left, Color.white, true);
+
+        var images = new Image[GraphicsManager.Names.Length];
+        float qW = 190f, qGap = 12f;
+        float totalW = qW * images.Length + qGap * (images.Length - 1);
+        for (int i = 0; i < images.Length; i++)
+        {
+            float x = -totalW * 0.5f + qW * 0.5f + i * (qW + qGap);
+            var qb = MakeButton(win, "BtnQuality_" + GraphicsManager.Names[i], GraphicsManager.Names[i],
+                Ctr, Ctr, new Vector2(x, -60), new Vector2(qW, 70), false, 28);
+            UnityEventTools.AddIntPersistentListener(qb.onClick, lobbyUI.SetQuality, i);
+            images[i] = qb.GetComponent<Image>();
+        }
+        lobbyUI.qualityButtons = images;
+        return panel;
+    }
+
+    GameObject BuildMailPanel(Transform root, LobbyUI lobbyUI)
+    {
+        var panel = MakePanel(root, "MailPanel", "MAIL");
+        var win = panel.transform.Find("Window");
+
+        string[] titles = { "Welcome gift", "Starter pack", "Thanks for playing" };
+        var labels = new TMP_Text[titles.Length];
+        for (int i = 0; i < titles.Length; i++)
+        {
+            var r = Box(win, "Mail_" + i, new Vector2(0, 120 - i * 84), new Vector2(780, 70), NavyDark);
+            Label(r.transform, titles[i] + "   +" + LobbyUI.MailRewards[i] + " GOLD", 28,
+                  new Vector2(-130, 0), new Vector2(480, 40), TextAlignmentOptions.Left, Color.white, true);
+
+            var claim = MakeButton(r.transform, "BtnClaim", "CLAIM", Ctr, Ctr,
+                new Vector2(270, 0), new Vector2(200, 54), false, 26);
+            UnityEventTools.AddIntPersistentListener(claim.onClick, lobbyUI.ClaimMail, i);
+            labels[i] = claim.transform.Find("Label").GetComponent<TMP_Text>();
+        }
+        lobbyUI.mailClaimLabels = labels;
+        return panel;
+    }
+
+    GameObject BuildEventsPanel(Transform root, LobbyUI lobbyUI)
+    {
+        var panel = MakePanel(root, "EventsPanel", "DAILY REWARD");
+        var win = panel.transform.Find("Window");
+
+        int days = LobbyUI.DailyRewards.Length;
+        var tiles = new Image[days];
+        var rewards = new TMP_Text[days];
+        for (int i = 0; i < days; i++)
+        {
+            float x = -(days - 1) * 110f * 0.5f + i * 110f;
+            var tile = Box(win, "Day_" + (i + 1), new Vector2(x, 60), new Vector2(100, 150), NavyDark);
+            Label(tile.transform, "DAY " + (i + 1), 24, new Vector2(0, 45), new Vector2(96, 34),
+                  TextAlignmentOptions.Center, Color.white, true);
+            rewards[i] = Label(tile.transform, "+" + LobbyUI.DailyRewards[i], 28, new Vector2(0, -15),
+                  new Vector2(96, 40), TextAlignmentOptions.Center, new Color(1f, 0.78f, 0.25f), true);
+            tiles[i] = tile;
+        }
+
+        var claim = MakeButton(win, "BtnClaimDaily", "CLAIM", Ctr, Ctr, new Vector2(0, -85),
+            new Vector2(300, 70), true, 32);
+        UnityEventTools.AddPersistentListener(claim.onClick, lobbyUI.ClaimDaily);
+
+        lobbyUI.dayTiles = tiles;
+        lobbyUI.dayRewardTexts = rewards;
+        lobbyUI.dailyClaimLabel = claim.transform.Find("Label").GetComponent<TMP_Text>();
+        return panel;
+    }
+
+    // =========================== KOMPONEN ===========================
+
+    // Tombol bersudut terpotong (kiri-atas & kanan-bawah). Primary = merah solid (START)
     Button MakeButton(Transform parent, string name, string label, Vector2 anchor, Vector2 pivot,
-                      Vector2 pos, Vector2 size, bool isPrimary)
+                      Vector2 pos, Vector2 size, bool isPrimary, float fontSize = 30)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(Image));
         go.transform.SetParent(parent, false);
         Place(go.GetComponent<RectTransform>(), anchor, pivot, pos, size);
 
         var bg = go.GetComponent<Image>();
-        bg.sprite = slantSprite;
+        bg.sprite = chamfer;
         bg.type = Image.Type.Sliced;
-        bg.color = isPrimary ? BrightBlue : PanelDark;
+        bg.color = isPrimary ? Red : Navy;
 
-        // Glow tipis
-        var shadow = go.AddComponent<Shadow>();
-        shadow.effectColor = isPrimary ? new Color(0.2f, 0.8f, 1f, 0.55f) : new Color(0f, 0.1f, 0.3f, 0.5f);
-        shadow.effectDistance = new Vector2(0, -5);
-
-        // Border PUTIH
-        var border = NewImage("Outline", go.transform, slantOutline, Color.white);
+        var border = NewImage("Outline", go.transform, chamferOutline,
+            isPrimary ? new Color(1f, 0.55f, 0.6f, 0.9f) : RedLine);
         border.type = Image.Type.Sliced;
         border.raycastTarget = false;
         Stretch(border.rectTransform);
 
-        // Aksen cyan miring di kiri
-        var accent = NewImage("Accent", go.transform, null, NeonBlue);
-        accent.raycastTarget = false;
-        Place(accent.rectTransform, new Vector2(0, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(40, 0),
-              new Vector2(isPrimary ? 8 : 6, size.y * 0.55f));
-        accent.rectTransform.localRotation = Quaternion.Euler(0, 0, -17);
-
-        // Garis tipis cyan di bawah (kesan cyber)
-        var under = NewImage("Underline", go.transform, null, NeonBlue);
-        under.raycastTarget = false;
-        Place(under.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 8),
-              new Vector2(size.x * 0.55f, 3));
-
-        var txt = NewText("Label", go.transform, label, isPrimary ? 56 : 32);
-        txt.fontStyle = FontStyles.Bold | FontStyles.Italic;
-        txt.characterSpacing = isPrimary ? 10 : 6;
+        var txt = NewText("Label", go.transform, label, fontSize);
+        txt.fontStyle = FontStyles.Bold;
+        txt.characterSpacing = 2;
         txt.color = Color.white;
         Stretch(txt.rectTransform);
-
-        var arrow = NewText("Arrow", go.transform, "»", isPrimary ? 60 : 38);
-        arrow.color = isPrimary ? Color.white : NeonBlue;
-        arrow.fontStyle = FontStyles.Bold;
-        Place(arrow.rectTransform, new Vector2(1, 0.5f), new Vector2(1, 0.5f), new Vector2(-46, 2), new Vector2(44, 60));
 
         var btn = go.AddComponent<Button>();
         btn.targetGraphic = bg;
         btn.transition = Selectable.Transition.ColorTint;
         var c = btn.colors;
-        c.normalColor      = Color.white;
-        c.highlightedColor = new Color(0.65f, 0.9f, 1f);
-        c.pressedColor     = new Color(0.45f, 0.65f, 0.9f);
-        c.selectedColor    = Color.white;
+        c.normalColor      = new Color(0.88f, 0.88f, 0.92f);
+        c.highlightedColor = Color.white;
+        c.pressedColor     = new Color(0.62f, 0.62f, 0.68f);
+        c.selectedColor    = c.normalColor;
         c.fadeDuration     = 0.1f;
         btn.colors = c;
         return btn;
     }
 
-    // --- PANEL POP-UP (Shop / Settings) ---
+    // Tombol persegi datar kecil (MAIL / EVENTS)
+    Button MakeFlatButton(Transform parent, string name, string label, Vector2 anchor, Vector2 pivot,
+                          Vector2 pos, Vector2 size, float fontSize)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(parent, false);
+        Place(go.GetComponent<RectTransform>(), anchor, pivot, pos, size);
+
+        var bg = go.GetComponent<Image>();
+        bg.color = Navy;
+        RectOutline(go.transform, RedLine, 2f);
+
+        var txt = NewText("Label", go.transform, label, fontSize);
+        txt.fontStyle = FontStyles.Bold;
+        txt.characterSpacing = 2;
+        Stretch(txt.rectTransform);
+
+        var btn = go.AddComponent<Button>();
+        btn.targetGraphic = bg;
+        btn.transition = Selectable.Transition.ColorTint;
+        var c = btn.colors;
+        c.normalColor      = new Color(0.88f, 0.88f, 0.92f);
+        c.highlightedColor = Color.white;
+        c.pressedColor     = new Color(0.62f, 0.62f, 0.68f);
+        c.selectedColor    = c.normalColor;
+        c.fadeDuration     = 0.1f;
+        btn.colors = c;
+        return btn;
+    }
+
+    // Kotak datar berborder tipis (status bar)
+    Image FlatBox(Transform parent, string name, Vector2 anchor, Vector2 pos, Vector2 size)
+    {
+        var img = NewImage(name, parent, null, NavyDark);
+        img.raycastTarget = false;
+        Place(img.rectTransform, anchor, anchor, pos, size);
+        RectOutline(img.transform, RedDim, 1.5f);
+        return img;
+    }
+
+    // Border persegi dari 4 garis tipis
+    void RectOutline(Transform parent, Color c, float t)
+    {
+        var top = NewImage("EdgeT", parent, null, c);
+        top.raycastTarget = false;
+        top.rectTransform.anchorMin = new Vector2(0, 1);
+        top.rectTransform.anchorMax = new Vector2(1, 1);
+        top.rectTransform.pivot = new Vector2(0.5f, 1);
+        top.rectTransform.sizeDelta = new Vector2(0, t);
+        top.rectTransform.anchoredPosition = Vector2.zero;
+
+        var bot = NewImage("EdgeB", parent, null, c);
+        bot.raycastTarget = false;
+        bot.rectTransform.anchorMin = new Vector2(0, 0);
+        bot.rectTransform.anchorMax = new Vector2(1, 0);
+        bot.rectTransform.pivot = new Vector2(0.5f, 0);
+        bot.rectTransform.sizeDelta = new Vector2(0, t);
+        bot.rectTransform.anchoredPosition = Vector2.zero;
+
+        var lef = NewImage("EdgeL", parent, null, c);
+        lef.raycastTarget = false;
+        lef.rectTransform.anchorMin = new Vector2(0, 0);
+        lef.rectTransform.anchorMax = new Vector2(0, 1);
+        lef.rectTransform.pivot = new Vector2(0, 0.5f);
+        lef.rectTransform.sizeDelta = new Vector2(t, 0);
+        lef.rectTransform.anchoredPosition = Vector2.zero;
+
+        var rig = NewImage("EdgeR", parent, null, c);
+        rig.raycastTarget = false;
+        rig.rectTransform.anchorMin = new Vector2(1, 0);
+        rig.rectTransform.anchorMax = new Vector2(1, 1);
+        rig.rectTransform.pivot = new Vector2(1, 0.5f);
+        rig.rectTransform.sizeDelta = new Vector2(t, 0);
+        rig.rectTransform.anchoredPosition = Vector2.zero;
+    }
+
+    // Panel pop-up dasar (overlay gelap + jendela + tombol CLOSE)
     GameObject MakePanel(Transform root, string name, string title)
     {
-        var overlay = NewImage(name, root, null, new Color(0f, 0.02f, 0.08f, 0.7f));
+        var overlay = NewImage(name, root, null, new Color(0f, 0.01f, 0.05f, 0.8f));
         Stretch(overlay.rectTransform);
         overlay.raycastTarget = true; // blok klik di belakang
 
-        var win = NewImage("Window", overlay.transform, slantSprite, new Color(0.03f, 0.1f, 0.26f, 0.95f));
+        var win = NewImage("Window", overlay.transform, chamfer, new Color(0.05f, 0.07f, 0.17f, 0.98f));
         win.type = Image.Type.Sliced;
-        Place(win.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 580));
+        Place(win.rectTransform, Ctr, Ctr, Vector2.zero, new Vector2(900, 580));
 
-        var outline = NewImage("Outline", win.transform, slantOutline, Color.white);
+        var outline = NewImage("Outline", win.transform, chamferOutline, RedLine);
         outline.type = Image.Type.Sliced;
         outline.raycastTarget = false;
         Stretch(outline.rectTransform);
 
-        var t = NewText("Title", win.transform, title, 56);
-        t.fontStyle = FontStyles.Bold | FontStyles.Italic;
-        t.characterSpacing = 8;
+        var t = NewText("Title", win.transform, title, 52);
+        t.fontStyle = FontStyles.Bold;
+        t.characterSpacing = 6;
         Place(t.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -30), new Vector2(700, 80));
 
         var close = MakeButton(win.transform, "BtnClose", "CLOSE", new Vector2(0.5f, 0), new Vector2(0.5f, 0),
-            new Vector2(0, 36), new Vector2(300, 76), false);
+            new Vector2(0, 36), new Vector2(300, 76), false, 32);
         UnityEventTools.AddBoolPersistentListener(close.onClick, overlay.gameObject.SetActive, false);
         return overlay.gameObject;
+    }
+
+    // Kotak bersudut terpotong dengan outline merah (kartu, slot, baris, dll.)
+    Image Box(Transform parent, string name, Vector2 pos, Vector2 size, Color fill)
+    {
+        var img = NewImage(name, parent, chamfer, fill);
+        img.type = Image.Type.Sliced;
+        img.raycastTarget = false;
+        Place(img.rectTransform, Ctr, Ctr, pos, size);
+
+        var o = NewImage("Outline", img.transform, chamferOutline, new Color(RedLine.r, RedLine.g, RedLine.b, 0.75f));
+        o.type = Image.Type.Sliced;
+        o.raycastTarget = false;
+        Stretch(o.rectTransform);
+        return img;
+    }
+
+    TextMeshProUGUI Label(Transform parent, string text, float size, Vector2 pos, Vector2 box,
+                          TextAlignmentOptions align, Color color, bool bold = false)
+    {
+        var t = NewText("Text", parent, text, size);
+        t.alignment = align;
+        t.color = color;
+        if (bold) t.fontStyle = FontStyles.Bold;
+        Place(t.rectTransform, Ctr, Ctr, pos, box);
+        return t;
     }
 
     Slider MakeSlider(Transform parent, Vector2 pos, Vector2 size)
     {
         var go = new GameObject("VolumeSlider", typeof(RectTransform), typeof(Slider));
         go.transform.SetParent(parent, false);
-        Place(go.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, size);
+        Place(go.GetComponent<RectTransform>(), Ctr, Ctr, pos, size);
 
         var back = NewImage("Background", go.transform, null, new Color(1f, 1f, 1f, 0.15f));
         back.raycastTarget = false;
@@ -311,7 +684,7 @@ public class MainMenuBuilder : EditorWindow
         far.anchorMax = new Vector2(1, 0.65f);
         far.offsetMin = far.offsetMax = Vector2.zero;
 
-        var fill = NewImage("Fill", fillArea.transform, null, NeonBlue);
+        var fill = NewImage("Fill", fillArea.transform, null, Red);
         fill.raycastTarget = false;
         fill.rectTransform.sizeDelta = Vector2.zero;
 
@@ -338,24 +711,26 @@ public class MainMenuBuilder : EditorWindow
         return s;
     }
 
-    // --- PEMBUAT SPRITE (Jajar Genjang) ---
+    // --- PEMBUAT SPRITE (persegi panjang, sudut kiri-atas & kanan-bawah terpotong) ---
     delegate bool InsideFn(float x, float y, float w, float h);
 
     void CreateSprites()
     {
         Directory.CreateDirectory(Application.dataPath + "/MenuSprites");
 
-        slantSprite = Shape("menu_slant", 256, 64, new Vector4(40, 0, 40, 0),
-            (x, y, w, h) => Slant(x, y, w, h, 20f, 0f, 0f));
-        slantOutline = Shape("menu_slant_outline", 256, 64, new Vector4(40, 0, 40, 0),
-            (x, y, w, h) => Slant(x, y, w, h, 20f, 0f, 0f) && !Slant(x, y, w, h, 20f, 4f, 3.5f));
+        chamfer = Shape("menu_chamfer", 256, 64, new Vector4(22, 22, 22, 22),
+            (x, y, w, h) => Chamfer(x, y, w, h, 18f, 0f));
+        chamferOutline = Shape("menu_chamfer_outline", 256, 64, new Vector4(22, 22, 22, 22),
+            (x, y, w, h) => Chamfer(x, y, w, h, 18f, 0f) && !Chamfer(x, y, w, h, 18f, 2.5f));
     }
 
-    static bool Slant(float x, float y, float w, float h, float s, float inset, float vInset)
+    static bool Chamfer(float x, float y, float w, float h, float c, float inset)
     {
-        if (y < vInset || y > h - vInset) return false;
-        float k = y / h;
-        return x >= s * k + inset && x <= w - s * (1f - k) - inset;
+        if (x < inset || x > w - inset || y < inset || y > h - inset) return false;
+        float d = inset * 1.4142f;
+        if (x + (h - y) < c + d) return false;   // potong kiri-atas
+        if ((w - x) + y < c + d) return false;   // potong kanan-bawah
+        return true;
     }
 
     Sprite Shape(string name, int w, int h, Vector4 border, InsideFn inside)
