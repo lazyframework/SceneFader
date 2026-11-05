@@ -14,7 +14,7 @@ public class MainMenuBuilder : EditorWindow
     TMP_FontAsset customFont;
     string gameScene  = "GameScene";
     string playerName = "PLAYER";
-    string agentTag   = "AGENT 001";
+    string agentTag   = "ETERAL WORLD";
     string rankText   = "ROOKIE 1";
     string version    = "v1.0.0  |  REGION: ID";
     float bottomY     = 60f;  // jarak baris tombol dari bawah layar
