@@ -24,9 +24,9 @@ public class LobbyUI : MonoBehaviour
     const string GoldKey = "Gold", CharKey = "SelectedCharacter";
     const string LastKey = "DailyLast", StreakKey = "DailyStreak", MailKey = "MailClaimed_";
 
-    static readonly Color On   = new Color(0.1f, 0.45f, 1f);
-    static readonly Color Off  = new Color(0.02f, 0.08f, 0.22f, 0.82f);
-    static readonly Color Done = new Color(0.08f, 0.16f, 0.3f, 0.6f);
+    static readonly Color On   = new Color(0.87f, 0.18f, 0.26f);          // merah
+    static readonly Color Off  = new Color(0.07f, 0.10f, 0.22f, 0.93f);   // navy
+    static readonly Color Done = new Color(0.10f, 0.12f, 0.20f, 0.6f);
 
     // Bisa dibaca dari GameScene: LobbyUI.Gold, LobbyUI.SelectedCharacter
     public static int Gold => PlayerPrefs.GetInt(GoldKey, 0);
@@ -104,7 +104,7 @@ public class LobbyUI : MonoBehaviour
     // ---------- Update tampilan ----------
     void Refresh()
     {
-        if (goldText != null) goldText.text = "GOLD  " + Gold;
+        if (goldText != null) goldText.text = Gold.ToString("N0", CultureInfo.InvariantCulture);
 
         if (qualityButtons != null)
         {
